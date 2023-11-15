@@ -17,7 +17,7 @@ git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
 ```
 Execute the script in the directory with the topology files from the VSOMM2:
 ```bash
-Will be added ...
+python3 martini-som.py
 ```
 
 ## Roadmap
