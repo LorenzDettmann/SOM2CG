@@ -22,8 +22,8 @@ Will be added ...
 
 ## Roadmap
 
-- [] Determine more accurate beads for first and last groups in molecules
-- [] Reduce number of additional packages to be used
+- Determine more accurate beads for first and last groups in molecules
+- Reduce number of additional packages to be used
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggstions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
