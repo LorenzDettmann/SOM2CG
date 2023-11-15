@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+__author__ = "Lorenz Dettmann"
+__email__ = "lorenz.dettmann@uni-rostock.de"
+__version__ = "0.1.0"
+__status__ = "Development"
+
 import os
-from rdkit import Chem
 import numpy as np
+from rdkit import Chem
 import MDAnalysis as mda
 from MDAnalysis import transformations
 from scipy.sparse.csgraph import floyd_warshall
-from rdkit.Chem import AllChem, rdmolfiles
 import random
 from natsort import natsorted
 import math
@@ -988,7 +992,7 @@ def get_smi(bead, mol):
     """
     # gets fragment smiles from list of atoms
 
-    bead_smi = rdmolfiles.MolFragmentToSmiles(mol, bead)
+    bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead)
 
     # Work out aromaticity by looking for lowercase c and heteroatoms
     lc = re.compile('[cn([nH\])os]+')
@@ -1007,7 +1011,7 @@ def get_smi(bead, mol):
             try:
                 bead_smi = 'c1c{}{}{}{}cc1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1])
             except:
-                bead_smi = rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
+                bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
             if not Chem.MolFromSmiles(bead_smi):  # If fragment isn't kekulisable use 5-membered ring
                 bead_smi = 'c1c{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1])
         # For three atoms + substituents, make a dimer
@@ -1022,17 +1026,17 @@ def get_smi(bead, mol):
                 bead_smi = 'c1c{}{}{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1], lowerlist[2],
                                                       subs[2])
             except:
-                bead_smi = rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
+                bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
 
             if not Chem.MolFromSmiles(bead_smi):
                 bead_smi = 'c1{}{}{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1], lowerlist[2],
                                                      subs[2])
 
     if not Chem.MolFromSmiles(bead_smi):
-        bead_smi = rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
+        bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
 
     # Standardise SMILES for lookup
-    bead_smi = rdmolfiles.MolToSmiles(Chem.MolFromSmiles(bead_smi))
+    bead_smi = Chem.rdmolfiles.MolToSmiles(Chem.MolFromSmiles(bead_smi))
 
     return bead_smi
 
@@ -1053,7 +1057,6 @@ def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mo
                 '{:5d}{:>6}{:5d}{:>5}{:>5}{:5d}{:>10.3f}{:>10.3f};{}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
                                                                                'CG' + str(b + 1), b + 1, charges[b],
                                                                                masses[b], all_smi[b]))
-        # write_atoms(itp,A_cg,mol_name,bead_types,charges,all_smi,coords0,ring_beads,virtual,masses,resname_list)
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, nconfs)
         angles = write_angles(itp, bonds, constraints, beads, mol, nconfs)
         if dihedrals:
@@ -1307,7 +1310,7 @@ for i, mol in enumerate(sequence):
 mapping = []
 resnames = []
 for i, smi in enumerate(merged_smiles):
-    print(f"Molecule {i}")
+    print(f"Molecule {i + 1}")
     mol_name = 'MOL'
     mol = Chem.MolFromSmiles(smi)
 
@@ -1327,8 +1330,8 @@ for i, smi in enumerate(merged_smiles):
 
     nconfs = 5
     mol = Chem.AddHs(mol)
-    AllChem.EmbedMultipleConfs(mol, numConfs=nconfs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
-    AllChem.UFFOptimizeMoleculeConfs(mol)
+    Chem.AllChem.EmbedMultipleConfs(mol, numConfs=nconfs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
+    Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
     coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
 
     virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
