@@ -21,7 +21,8 @@ Will be added ...
 ```
 
 ## Roadmap
-
+- Include options for changing the standard input and output directories, as well as `nconf`
+- Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
 - Determine more accurate beads for first and last groups in molecules
 - Reduce number of additional packages to be used
 
