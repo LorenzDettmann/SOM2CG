@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __status__ = "Development"
 
 import os
@@ -13,7 +13,6 @@ import MDAnalysis as mda
 from MDAnalysis import transformations
 from scipy.sparse.csgraph import floyd_warshall
 import random
-from natsort import natsorted
 import math
 import re
 import warnings
@@ -525,52 +524,49 @@ def read_itps(PATH, GRO):
     sequence = []
 
     n = 0
-    for file in natsorted(l):
-        filename = os.fsdecode(file)
-        if filename.endswith(".itp") and filename.startswith('HS_'):
-            itp_list.append(f'{file}')
-            u1 = mda.Universe(f'{PATH}{file}', topology_format='ITP')
-            # read out sequence of fragments, HS1 has C1 and CA
-            sequence.append(u.atoms[
-                                np.add(u1.select_atoms('name C1 or name CA and not (name CA and resname HS1)').indices,
-                                       n)].resnames)
-            n += len(u1.atoms)  # index for last atom
-            if u1.atoms[0].type == 'HC':
+    sorted_list = sorted([file for file in l if file.startswith("HS_") and file.endswith(".itp")],
+                         key=lambda x: int(x.split('_')[1].split('.')[0]))
+    for file in sorted_list:
+        itp_list.append(f'{file}')
+        u1 = mda.Universe(f'{PATH}{file}', topology_format='ITP')
+        # read out sequence of fragments, HS1 has C1 and CA
+        sequence.append(u.atoms[np.add(
+            u1.select_atoms('name C1 or name CA and not (name CA and resname HS1)').indices, n)].resnames)
+        n += len(u1.atoms)  # index for last atom
+        if u1.atoms[0].type == 'HC':
+            first_atoms.append('H')
+            first_add.append(1)
+        elif u1.atoms[0].type == 'CH3':
+            if u1.atoms[0].name == 'C1':  # this methyl group is part of the fragment by default
                 first_atoms.append('H')
-                first_add.append(1)
-            elif u1.atoms[0].type == 'CH3':
-                if u1.atoms[0].name == 'C1':  # this methyl group is part of the fragment by default
-                    first_atoms.append('H')
-                    first_add.append(0)
-                else:
-                    first_atoms.append('C')
-                    first_add.append(1)
-            elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
-                first_atoms.append('O')
-                first_add.append(2)
+                first_add.append(0)
             else:
-                print(f'No rule for atom type {u1.atoms[0].type}.')
-            if u1.atoms[-1].type == 'HC':
+                first_atoms.append('C')
+                first_add.append(1)
+        elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
+            first_atoms.append('O')
+            first_add.append(2)
+        else:
+            print(f'No rule for atom type {u1.atoms[0].type}.')
+        if u1.atoms[-1].type == 'HC':
+            last_atoms.append('H')
+            last_add.append(1)
+        elif u1.atoms[-1].type == 'CH3':
+            if (u1.atoms[-1].name == 'C3' or u1.atoms[-1].name == 'C4' or u1.atoms[-1].name == 'C13'
+                    or u1.atoms[-1].name == 'CD2'):
+                last_atoms.append('H')
+                last_add.append(0)
+            else:
+                last_atoms.append('C')
+                last_add.append(1)
+        elif u1.atoms[-1].type == 'H':
+            if u.atoms[n - 1].resname in FRG_O:
                 last_atoms.append('H')
                 last_add.append(1)
-            elif u1.atoms[-1].type == 'CH3':
-                if (u1.atoms[-1].name == 'C3' or u1.atoms[-1].name == 'C4' or u1.atoms[-1].name == 'C13'
-                        or u1.atoms[-1].name == 'CD2'):
-                    last_atoms.append('H')
-                    last_add.append(0)
-                else:
-                    last_atoms.append('C')
-                    last_add.append(1)
-            elif u1.atoms[-1].type == 'H':
-                if u.atoms[n - 1].resname in FRG_O:
-                    last_atoms.append('H')
-                    last_add.append(1)
-                else:
-                    last_atoms.append('O')
-                    last_add.append(2)
-            continue
-        else:
-            continue
+            else:
+                last_atoms.append('O')
+                last_add.append(2)
+        continue
     return first_atoms, first_add, last_atoms, last_add, sequence, itp_list
 
 
@@ -667,22 +663,16 @@ def translate_mapping(mapping, vsomm_list):
     return translation
 
 
-def get_max(l):
-    m = 0
-    for i in l:
-        if type(i) == list or type(i) == np.ndarray:
-            for j in i:
-                if type(j) == list or type(j) == np.ndarray:
-                    for k in j:
-                        if k > m:
-                            m = k
-                else:
-                    if j > m:
-                        m = j
-        else:
-            if i > m:
-                m = i
-    return m
+def get_largest_index(input_list):
+    # returns the largest index in a list (of lists)
+    max_value = 0
+    for element in input_list:
+        if isinstance(element, list) or isinstance(element, np.ndarray):
+            max_value = max(max_value, get_largest_index(element))
+        elif isinstance(element, int):
+            max_value = max(max_value, element)
+
+    return max_value
 
 
 def return_index(vsomm_list, atom_of_interest):
@@ -730,18 +720,6 @@ def list_add(FRG_mapping, n):
     return FRG_mapping_added
 
 
-def determine_no_of_atoms(FRG_mapping):
-    # number of atoms within fragment (largest index)
-    max = 0
-    for bead in FRG_mapping:
-        for atom in bead:
-            if atom > max:
-                max = atom
-            else:
-                continue
-    return max
-
-
 def add_at_first(indices, first_add):
     # add indices at the beginning (into first bead)
     indices_add = []
@@ -754,10 +732,10 @@ def add_at_first(indices, first_add):
 def add_at_last(indices, last_add, FRG):
     # add indices into last bead of fragment
     # index of bead, in which last atom should be added
-    index = get_max(fragments_connections[FRG])  # add this to function input
+    index = get_largest_index(fragments_connections[FRG])  # add this to function input
     indices_add = []
     indices_add += indices[index]
-    no_of_atoms = determine_no_of_atoms(indices)
+    no_of_atoms = get_largest_index(indices)
     for i in range(no_of_atoms, no_of_atoms + last_add):
         indices_add.append(i + 1)
     return indices[:index] + [indices_add] + indices[index + 1:]
@@ -774,7 +752,7 @@ def create_mapping_vsomm(sequence, fragments_mapping, first_add, last_add):
         elif i == len(sequence) - 1:
             indices = add_at_last(indices, last_add, FRG)  # actually add at last bead of fragment
         mapping_vsomm += indices
-        prev_atoms += determine_no_of_atoms(fragments_mapping[FRG])
+        prev_atoms += get_largest_index(fragments_mapping[FRG])
     return mapping_vsomm
 
 
@@ -802,7 +780,7 @@ def create_A_matrix(sequence, fragments_connections, fragments_lengths, FRG_same
         if sequence[i] in FRG_same:
             i_last = prev_beads
         else:
-            i_last = prev_beads + determine_no_of_atoms(
+            i_last = prev_beads + get_largest_index(
                 fragments_connections[sequence[i]])  # take the highest index, not length due to VS
         prev_beads += fragments_lengths[sequence[i]]
         i_first = prev_beads
@@ -1306,7 +1284,6 @@ for i, mol in enumerate(sequence):
     vsomm_lists.append(vsomm_list)
     rdkit_lists.append(rdkit_list)
 
-
 mapping = []
 resnames = []
 for i, smi in enumerate(merged_smiles):
@@ -1342,7 +1319,6 @@ for i, smi in enumerate(merged_smiles):
     mapping.append(beads)
     resnames.append(resname_list)
 
-
 # add bonds for unwrapping
 # load atomistic coordinates
 u = mda.Universe(f'{GRO}')
@@ -1362,7 +1338,6 @@ u.add_TopologyAttr('bonds', bonds)
 workflow = [transformations.unwrap(u.atoms)]
 u.trajectory.add_transformations(*workflow)
 
-
 # get total number of beads
 n_beads = 0
 for i, file in enumerate(itp_list):
@@ -1370,7 +1345,6 @@ for i, file in enumerate(itp_list):
     n_beads += len(mapping[i])
 n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
                        residue_segindex=np.zeros(n_beads))
-
 
 coords = []
 prev_atoms = 0
@@ -1383,16 +1357,14 @@ for i, mol in enumerate(sequence):
         coords.append(a.center_of_geometry())
         resids.append(i + 1)
         names_gro.append(f"CG{j + 1}")
-    prev_atoms += get_max(vsomm_lists[i])
+    prev_atoms += get_largest_index(vsomm_lists[i])
 n.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
-
 
 # set box size to that of the atomistic frame
 n.dimensions = u.dimensions
 # wrap molecules
 workflow = [transformations.wrap(n.atoms)]
 n.trajectory.add_transformations(*workflow)
-
 
 # save mapped coordinates with calcium ions
 CA = u.select_atoms("resname CA2+")
@@ -1408,12 +1380,10 @@ merged.dimensions = u.dimensions
 resnames_flat = ([item for sublist in resnames if isinstance(sublist, list) for item in sublist]
                  + [item for item in resnames if not isinstance(item, list)])
 
-
 merged.add_TopologyAttr('resid', resids)
 merged.add_TopologyAttr('resname', resnames_flat)
 merged.add_TopologyAttr('name', names_gro)
 merged.atoms.write(f'{CG_PATH}/mapped.gro')
-
 
 # create 'water.pdb' if not already present
 water_pdb = """ITLE     Gromacs Runs On Most of All Computer Systems    
@@ -1434,7 +1404,6 @@ N = round(len(u.select_atoms('name OW')) / 4)
 print(
     f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
     + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
-
 
 for file in itp_list:
     with open(f"{CG_PATH}/{file}", "r") as f:

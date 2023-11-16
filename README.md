@@ -6,7 +6,7 @@ A tool for converting atomistic Soil Organic Matter (SOM) models from the Vienna
 
 The script is written in Python 3. The following packages are needed and can be install via `pip`:
 ```bash
-pip install MDAnalysis rdkit scipy natsort
+pip install MDAnalysis rdkit scipy
 ```
 
 ## Getting started
