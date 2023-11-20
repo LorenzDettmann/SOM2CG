@@ -15,17 +15,18 @@ Clone the repository from Gitlab:
 ```bash
 git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
 ```
-Execute the script in the directory with the topology files from the VSOMM2:
+You can execute the script in the directory with the topology files from the VSOMM2, or modify the directory paths
+in the following way:
 ```bash
-python3 martini-som.py
+python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers']
 ```
 
 ## Roadmap
-- Include options for changing the standard input and output directories, as well as `nconf`
-- Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
-- Add more informative visual output
-- Determine more accurate beads for first and last groups in molecules
-- Reduce number of additional packages to be used
+- [X] Include options for changing the standard input and output directories, as well as `nconf`
+- [ ] Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
+- [ ] Generalize the script for use with sodium ions
+- [ ] Add more information to the visual output
+- [ ] Determine more accurate beads for first and last groups in molecules
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggstions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
