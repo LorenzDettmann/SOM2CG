@@ -4,7 +4,7 @@ A tool for converting atomistic Soil Organic Matter (SOM) models from the Vienna
 
 ## Prerequisites
 
-The script is written in Python 3. The following packages are needed and can be install via `pip`:
+The script is written in Python 3. The following packages are needed and can be installed via `pip`:
 ```bash
 pip install MDAnalysis rdkit scipy
 ```
@@ -15,8 +15,8 @@ Clone the repository from Gitlab:
 ```bash
 git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
 ```
-You can execute the script in the directory with the topology files from the VSOMM2, or modify the directory paths
-in the following way:
+You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths
+using the following arguments:
 ```bash
 python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers']
 ```
