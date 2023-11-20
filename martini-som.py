@@ -3,10 +3,11 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __status__ = "Development"
 
 import os
+import argparse
 import numpy as np
 from rdkit import Chem
 import MDAnalysis as mda
@@ -19,11 +20,6 @@ import warnings
 
 # from tqdm import tqdm
 warnings.filterwarnings("ignore", category=Warning)
-
-# input and output locations
-PATH = 'INIT_at/'
-GRO = f'{PATH}min_system.gro'
-CG_PATH = 'INIT_cg'
 
 # fragment names
 names = np.array(['HS1', 'HS2', 'HS3', 'HS3p', 'HS4', 'HS4p', 'HS6', 'HS6p', 'HS7',
@@ -513,7 +509,12 @@ def read_itps(PATH, GRO):
         l[i] = l[i].decode()
     itp_list = []
 
+    if not os.path.exists(GRO):
+        print(f"Error: The file '{GRO}' containing the atomistic coordinates does not exist.")
+        abort_script()
+
     u = mda.Universe(GRO)  # to get correct resnames
+    n_gro = len(u.select_atoms("not (resname SOLV or resname CA2+ or resname NA+)"))
 
     first_atoms = []
     last_atoms = []
@@ -526,9 +527,13 @@ def read_itps(PATH, GRO):
     n = 0
     sorted_list = sorted([file for file in l if file.startswith("HS_") and file.endswith(".itp")],
                          key=lambda x: int(x.split('_')[1].split('.')[0]))
+    if not sorted_list:
+        print(f"Error: No topology files of the form 'HS_*.itp' could be found in '{PATH}'.")
+        abort_script()
+
     for file in sorted_list:
         itp_list.append(f'{file}')
-        u1 = mda.Universe(f'{PATH}{file}', topology_format='ITP')
+        u1 = mda.Universe(f'{PATH}/{file}', topology_format='ITP')
         # read out sequence of fragments, HS1 has C1 and CA
         sequence.append(u.atoms[np.add(
             u1.select_atoms('name C1 or name CA and not (name CA and resname HS1)').indices, n)].resnames)
@@ -567,6 +572,12 @@ def read_itps(PATH, GRO):
                 last_atoms.append('O')
                 last_add.append(2)
         continue
+
+    if n != n_gro:
+        print(f"Error: Number of HS atoms in '{GRO}' does not match with the number of atoms from the topology files "
+              f"in '{PATH}/HS_*.itp'. Are some files missing?")
+        abort_script()
+
     return first_atoms, first_add, last_atoms, last_add, sequence, itp_list
 
 
@@ -767,7 +778,7 @@ def matrix_from_list(bonds, n):
 
 
 def create_A_matrix(sequence, fragments_connections, fragments_lengths, FRG_same):
-    # crate A matrix with information on connections
+    # create A matrix with information on connections
     bonds = []
     prev_beads = 0
     for FRG in sequence:
@@ -1019,7 +1030,7 @@ def get_smi(bead, mol):
     return bead_smi
 
 
-def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, nconfs, virtual, real,
+def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
               masses, resname_list, itp_name):
     """
     Imported and modified from the cg_param_m3.py script
@@ -1035,15 +1046,15 @@ def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mo
                 '{:5d}{:>6}{:5d}{:>5}{:>5}{:5d}{:>10.3f}{:>10.3f};{}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
                                                                                'CG' + str(b + 1), b + 1, charges[b],
                                                                                masses[b], all_smi[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, nconfs)
-        angles = write_angles(itp, bonds, constraints, beads, mol, nconfs)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
+        angles = write_angles(itp, bonds, constraints, beads, mol, n_confs)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
             write_virtual_sites(itp, virtual, beads)
 
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, nconfs):
+def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1065,7 +1076,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, nconfs):
         for i, bead in enumerate(beads):
             coords[i] = bead_coords(bead, conf, mol)
         for b, bond in enumerate(bonds):
-            rs[b] += np.linalg.norm(np.subtract(coords[bond[0]], coords[bond[1]])) / nconfs
+            rs[b] += np.linalg.norm(np.subtract(coords[bond[0]], coords[bond[1]])) / n_confs
 
     # Split into bonds and constraints, and write bonds
     con_rs = []
@@ -1096,7 +1107,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, nconfs):
     return bonds, constraints, dihedrals
 
 
-def write_angles(itp, bonds, constraints, beads, mol, nconfs):
+def write_angles(itp, bonds, constraints, beads, mol, n_confs):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1130,7 +1141,7 @@ def write_angles(itp, bonds, constraints, beads, mol, nconfs):
                 theta = np.arccos(np.dot(vec1, vec2))
                 thetas[a] += theta
 
-        thetas = thetas * 180.0 / (np.pi * nconfs)
+        thetas = thetas * 180.0 / (np.pi * n_confs)
 
         for a, t in zip(angles, thetas):
             itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, 2, t, k))
@@ -1271,143 +1282,205 @@ def bead_coords(bead, conf, mol):
     return coords
 
 
-first_atoms, first_add, last_atoms, last_add, sequence, itp_list = read_itps(PATH, GRO)
-merged_smiles = create_smiles(sequence, names, smiles, first_atoms, last_atoms)
+def abort_script():
+    print('Aborted')
+    exit()
 
-vsomm_lists = []
-rdkit_lists = []
-for i, mol in enumerate(sequence):
-    FRAGMENTS = []
-    for fragment in mol:
-        FRAGMENTS.append(globals()[fragment])  # convert strings to lists
-    rdkit_list, vsomm_list = translate_atoms(FRAGMENTS, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
-    vsomm_lists.append(vsomm_list)
-    rdkit_lists.append(rdkit_list)
 
-mapping = []
-resnames = []
-for i, smi in enumerate(merged_smiles):
-    print(f"Molecule {i + 1}")
-    mol_name = 'MOL'
-    mol = Chem.MolFromSmiles(smi)
+def check_arguments(PATH, CG_PATH):
+    # checks, if all arguments are properly set
+    # additionally checks, if files are going to be overwritten
+    if not os.path.exists(PATH):
+        print(f"Error: The input directory '{PATH}' does not exist.")
+        abort_script()
 
-    matched_maps, matched_beads = get_smarts_matches(mol)
-    ring_atoms = get_ring_atoms(mol)
-    A_cg = create_A_matrix(sequence[i], fragments_connections, fragments_lengths, FRG_same)
-    beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
-                             vsomm_lists[i])
-    ring_beads = determine_ring_beads(ring_atoms, beads)
-    non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
-    A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
-    path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
-    all_smi = get_smiles(beads, mol)
+    output_prefix = 'HS_'
+    output_suffix = '.itp'
+    cg_coordinate_file = 'mapped.gro'
 
-    charges = determine_charges(sequence[i], fragments_charges)
-    bead_types = determine_bead_types(sequence[i], fragments_bead_types)
+    output_files = [file for file in os.listdir(CG_PATH)
+                    if (file.startswith(output_prefix) and file.endswith(output_suffix)) or file == cg_coordinate_file]
 
-    nconfs = 5
-    mol = Chem.AddHs(mol)
-    Chem.AllChem.EmbedMultipleConfs(mol, numConfs=nconfs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
-    Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-    coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
+    if output_files:
+        print(f"Warning: The given output directory 'CG_PATH' does already contain topology files.")
+        user_input = input("Would you like to continue and overwrite existing files? (y/n) ")
+        if user_input.lower() != 'y':
+            abort_script()
 
-    virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
-    masses = get_standard_masses(bead_types, virtual)
-    resname_list = create_resname_list(sequence[i], fragments_lengths)
-    write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, nconfs, virtual, real, masses,
-              resname_list, f'{CG_PATH}/{itp_list[i]}')
-    mapping.append(beads)
-    resnames.append(resname_list)
 
-# add bonds for unwrapping
-# load atomistic coordinates
-u = mda.Universe(f'{GRO}')
-# add bonds from itp files
-n = 0
-for i, file in enumerate(itp_list):
-    u1 = mda.Universe(f'{PATH}{file}', topology_format='ITP')
-    if i == 0:
-        bonds = u1.bonds.indices
-        n += len(u1.atoms)
-    else:
-        for b in u1.bonds.indices:
-            bonds = np.concatenate((bonds, np.add(u1.bonds.indices, n)))
-        n += len(u1.atoms)
-u.add_TopologyAttr('bonds', bonds)
-# unwrap
-workflow = [transformations.unwrap(u.atoms)]
-u.trajectory.add_transformations(*workflow)
+def positive_integer(value):
+    int_value = int(value)
+    if int_value <= 0:
+        raise argparse.ArgumentTypeError(
+            f"The number of conformers set by '-n_confs' must be an integer greater than 0.")
+    return int_value
 
-# get total number of beads
-n_beads = 0
-for i, file in enumerate(itp_list):
-    # mapping = np.load(f'{CG_PATH}/{file[:-4]}.npy', allow_pickle=True)
-    n_beads += len(mapping[i])
-n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
-                       residue_segindex=np.zeros(n_beads))
 
-coords = []
-prev_atoms = 0
-resids = []
-names_gro = []
-for i, mol in enumerate(sequence):
-    for j, bead in enumerate(mapping[i]):
-        vsomm_indices = translate_mapping(bead, vsomm_lists[i])
-        a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
-        coords.append(a.center_of_geometry())
-        resids.append(i + 1)
-        names_gro.append(f"CG{j + 1}")
-    prev_atoms += get_largest_index(vsomm_lists[i])
-n.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
+def main():
+    parser = argparse.ArgumentParser(description='Martini SOM - A tool for converting atomistic Soil Organic Matter '
+                                                 '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
+                                                 'to a coarse-grained representation, compatible with the '
+                                                 'Martini 3 force field.', add_help=False)
 
-# set box size to that of the atomistic frame
-n.dimensions = u.dimensions
-# wrap molecules
-workflow = [transformations.wrap(n.atoms)]
-n.trajectory.add_transformations(*workflow)
+    # arguments
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
+                        help='Shows the version of the script')
+    parser.add_argument('-h', '--help', action='help', help='Shows this help message')
+    parser.add_argument('-input_dir', default=f'{os.path.dirname(os.path.abspath(__file__))}',
+                        help='Path to the input directory with the atomistic topology files')
+    parser.add_argument('-output_dir', default='INIT_cg',
+                        help='Path to the output directory with the coarse-grained topology files')
+    parser.add_argument('-n_confs', type=positive_integer, default=50,
+                        help='Number of conformers to generate for the parametrization')
 
-# save mapped coordinates with calcium ions
-CA = u.select_atoms("resname CA2+")
-for i in range(len(CA.atoms)):
-    resids.append(len(sequence) + i + 1)
-    resnames.append("CA")
-    names_gro.append("CA")
-# merge with calcium ions
-merged = mda.Merge(n.select_atoms("all"), CA)
-# add dimensions
-merged.dimensions = u.dimensions
-# add resnames, etc.
-resnames_flat = ([item for sublist in resnames if isinstance(sublist, list) for item in sublist]
-                 + [item for item in resnames if not isinstance(item, list)])
+    args = parser.parse_args()
+    # input and output locations
+    PATH = args.input_dir
+    GRO = f'{PATH}/min_system.gro'
+    CG_PATH = args.output_dir
 
-merged.add_TopologyAttr('resid', resids)
-merged.add_TopologyAttr('resname', resnames_flat)
-merged.add_TopologyAttr('name', names_gro)
-merged.atoms.write(f'{CG_PATH}/mapped.gro')
+    check_arguments(PATH, CG_PATH)
 
-# create 'water.pdb' if not already present
-water_pdb = """ITLE     Gromacs Runs On Most of All Computer Systems    
-REMARK    THIS IS A SIMULATION BOX    
-CRYST1   10.000   10.000   10.000  90.00  90.00  90.00 P 1           1    
-MODEL        1    
-ATOM      1  W     W     1       0.000   0.000   0.000  1.00  0.00                
-TER    
-ENDMDL   
-"""
-file = "water.pdb"
-if not os.path.exists(f"{CG_PATH}/{file}"):
-    f = open(f"{CG_PATH}/{file}", "w")
-    f.write(water_pdb)
-    f.close()
-# number of coarse-grained water molecules
-N = round(len(u.select_atoms('name OW')) / 4)
-print(
-    f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
-    + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+    first_atoms, first_add, last_atoms, last_add, sequence, itp_list = read_itps(PATH, GRO)
+    merged_smiles = create_smiles(sequence, names, smiles, first_atoms, last_atoms)
 
-for file in itp_list:
-    with open(f"{CG_PATH}/{file}", "r") as f:
-        file_data = f.read()
-    file_data = file_data.replace(f"MOL    1", f"{file[:-4]}    1")
-    with open(f"{CG_PATH}/{file}", "w") as f:
-        f.write(file_data)
+    vsomm_lists = []
+    rdkit_lists = []
+    for i, mol in enumerate(sequence):
+        FRAGMENTS = []
+        for fragment in mol:
+            FRAGMENTS.append(globals()[fragment])  # convert strings to lists
+        rdkit_list, vsomm_list = translate_atoms(FRAGMENTS, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
+        vsomm_lists.append(vsomm_list)
+        rdkit_lists.append(rdkit_list)
+
+    mapping = []
+    resnames = []
+    for i, smi in enumerate(merged_smiles):
+        print(f"Molecule {i + 1}")
+        mol_name = 'MOL'
+        mol = Chem.MolFromSmiles(smi)
+
+        matched_maps, matched_beads = get_smarts_matches(mol)
+        ring_atoms = get_ring_atoms(mol)
+        A_cg = create_A_matrix(sequence[i], fragments_connections, fragments_lengths, FRG_same)
+        beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
+                                 vsomm_lists[i])
+        ring_beads = determine_ring_beads(ring_atoms, beads)
+        non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
+        A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
+        path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
+        all_smi = get_smiles(beads, mol)
+
+        charges = determine_charges(sequence[i], fragments_charges)
+        bead_types = determine_bead_types(sequence[i], fragments_bead_types)
+
+        mol = Chem.AddHs(mol)
+        n_confs = args.n_confs
+        Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
+        Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
+        coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
+
+        virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
+        masses = get_standard_masses(bead_types, virtual)
+        resname_list = create_resname_list(sequence[i], fragments_lengths)
+        write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
+                  resname_list, f'{CG_PATH}/{itp_list[i]}')
+        mapping.append(beads)
+        resnames.append(resname_list)
+
+    # add bonds for unwrapping
+    # load atomistic coordinates
+    u = mda.Universe(f'{GRO}')
+    # add bonds from itp files
+    n = 0
+    for i, file in enumerate(itp_list):
+        u1 = mda.Universe(f'{PATH}/{file}', topology_format='ITP')
+        if i == 0:
+            bonds = u1.bonds.indices
+            n += len(u1.atoms)
+        else:
+            for b in u1.bonds.indices:
+                bonds = np.concatenate((bonds, np.add(u1.bonds.indices, n)))
+            n += len(u1.atoms)
+    u.add_TopologyAttr('bonds', bonds)
+    # unwrap
+    workflow = [transformations.unwrap(u.atoms)]
+    u.trajectory.add_transformations(*workflow)
+
+    # get total number of beads
+    n_beads = 0
+    for i, file in enumerate(itp_list):
+        n_beads += len(mapping[i])
+    n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
+                           residue_segindex=np.zeros(n_beads))
+
+    coords = []
+    prev_atoms = 0
+    resids = []
+    names_gro = []
+    for i, mol in enumerate(sequence):
+        for j, bead in enumerate(mapping[i]):
+            vsomm_indices = translate_mapping(bead, vsomm_lists[i])
+            a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
+            coords.append(a.center_of_geometry())
+            resids.append(i + 1)
+            names_gro.append(f"CG{j + 1}")
+        prev_atoms += get_largest_index(vsomm_lists[i])
+    n.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
+
+    # set box size to that of the atomistic frame
+    n.dimensions = u.dimensions
+    # wrap molecules
+    workflow = [transformations.wrap(n.atoms)]
+    n.trajectory.add_transformations(*workflow)
+
+    # save mapped coordinates with calcium ions
+    CA = u.select_atoms("resname CA2+")
+    for i in range(len(CA.atoms)):
+        resids.append(len(sequence) + i + 1)
+        resnames.append("CA")
+        names_gro.append("CA")
+    # merge with calcium ions
+    merged = mda.Merge(n.select_atoms("all"), CA)
+    # add dimensions
+    merged.dimensions = u.dimensions
+    # add resnames, etc.
+    resnames_flat = ([item for sublist in resnames if isinstance(sublist, list) for item in sublist]
+                     + [item for item in resnames if not isinstance(item, list)])
+
+    merged.add_TopologyAttr('resid', resids)
+    merged.add_TopologyAttr('resname', resnames_flat)
+    merged.add_TopologyAttr('name', names_gro)
+    merged.atoms.write(f'{CG_PATH}/mapped.gro')
+
+    # create 'water.pdb' if not already present
+    water_pdb = """ITLE     Gromacs Runs On Most of All Computer Systems    
+    REMARK    THIS IS A SIMULATION BOX    
+    CRYST1   10.000   10.000   10.000  90.00  90.00  90.00 P 1           1    
+    MODEL        1    
+    ATOM      1  W     W     1       0.000   0.000   0.000  1.00  0.00                
+    TER    
+    ENDMDL   
+    """
+    file = "water.pdb"
+    if not os.path.exists(f"{CG_PATH}/{file}"):
+        f = open(f"{CG_PATH}/{file}", "w")
+        f.write(water_pdb)
+        f.close()
+    # number of coarse-grained water molecules
+    N = round(len(u.select_atoms('name OW')) / 4)
+    print(
+        f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
+        + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+    for file in itp_list:
+        with open(f"{CG_PATH}/{file}", "r") as f:
+            file_data = f.read()
+        file_data = file_data.replace(f"MOL    1", f"{file[:-4]}    1")
+        with open(f"{CG_PATH}/{file}", "w") as f:
+            f.write(file_data)
+
+
+if __name__ == "__main__":
+    main()
