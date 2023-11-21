@@ -17,6 +17,7 @@ import random
 import math
 import re
 import warnings
+from tqdm import tqdm
 
 # from tqdm import tqdm
 warnings.filterwarnings("ignore", category=Warning)
@@ -792,7 +793,7 @@ def create_A_matrix(sequence, fragments_connections, fragments_lengths, FRG_same
             i_last = prev_beads
         else:
             i_last = prev_beads + get_largest_index(
-                fragments_connections[sequence[i]])  # take the highest index, not length due to VS
+                fragments_connections[sequence[i]])  # take the largest index not length, due to VS
         prev_beads += fragments_lengths[sequence[i]]
         i_first = prev_beads
         bonds += [[i_last, i_first]]
@@ -1063,7 +1064,6 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs):
     dihedrals = []
     for r, ring in enumerate(ring_atoms):
         A_cg, dihedrals = ring_bonding(real[r], virtual, A_cg, dihedrals)
-
     itp.write('\n[bonds]\n')
     bonds = [list(pair) for pair in np.argwhere(A_cg) if pair[1] > pair[0]]
     constraints = []
@@ -1356,8 +1356,10 @@ def main():
 
     mapping = []
     resnames = []
-    for i, smi in enumerate(merged_smiles):
-        print(f"Molecule {i + 1}")
+    print(f' - Generating output files for {len(merged_smiles)} HS molecules.')
+    for i in tqdm(range(len(merged_smiles))):
+        smi = merged_smiles[i]
+        # print(f"Molecule {i + 1}")
         mol_name = 'MOL'
         mol = Chem.MolFromSmiles(smi)
 
@@ -1370,7 +1372,8 @@ def main():
         non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
         A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
         path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
-        all_smi = get_smiles(beads, mol)
+        # all_smi = get_smiles(beads, mol)
+        all_smi = len(beads) * [[]]
 
         charges = determine_charges(sequence[i], fragments_charges)
         bead_types = determine_bead_types(sequence[i], fragments_bead_types)
@@ -1389,6 +1392,7 @@ def main():
         mapping.append(beads)
         resnames.append(resname_list)
 
+    print(f"- Generating initial structure file from '{GRO}'.")
     # add bonds for unwrapping
     # load atomistic coordinates
     u = mda.Universe(f'{GRO}')
@@ -1470,9 +1474,6 @@ def main():
         f.close()
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
-    print(
-        f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
-        + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
 
     for file in itp_list:
         with open(f"{CG_PATH}/{file}", "r") as f:
@@ -1481,6 +1482,10 @@ def main():
         with open(f"{CG_PATH}/{file}", "w") as f:
             f.write(file_data)
 
+    print('- Done')
+    print(
+        f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
+        + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
 
 if __name__ == "__main__":
     main()
