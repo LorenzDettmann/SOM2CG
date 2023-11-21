@@ -25,7 +25,9 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Include options for changing the standard input and output directories, as well as `nconf`
 - [ ] Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
 - [ ] Generalize the script for use with sodium ions
-- [ ] Add more information to the visual output
+- [ ] Remove redundant functions and dependencies on other packages
+- [X] Add more information to the visual output
+- [ ] Rewrite functions from cg_param_m3.py
 - [ ] Determine more accurate beads for first and last groups in molecules
 
 ## Contributing
