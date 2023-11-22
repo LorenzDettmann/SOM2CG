@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __status__ = "Development"
 
 import os
@@ -12,7 +12,7 @@ import numpy as np
 from rdkit import Chem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-from scipy.sparse.csgraph import floyd_warshall
+# from scipy.sparse.csgraph import floyd_warshall
 import random
 import math
 import re
@@ -408,25 +408,63 @@ HS2 = np.array([[0, 1, 2, 3, 4, 5, 6, 7],
                dtype=object)
 HS3 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
                 [1, 2, 3, np.array([4, 5]), 17, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], 4], dtype=object)
+HS3p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                [1, 2, 3, np.array([4, 5]), 19, 6, 7, 8, 9, 10, np.array([12, 13]), 11, 14, 15, 16, np.array([17, 18])],
+                 4], dtype=object)
+HS4 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                [1, 2, np.array([3, 4]), 15, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 3], dtype=object)
+HS4p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                [1, 2, np.array([3, 4]), 17, 5, 6, 7, 8, np.array([10, 11]), 9, 12, 13, np.array([15, 16]), 14],
+                 3], dtype=object)
+HS6 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, np.array([3, 4]), 5, 6, 7, 8, 12, 9, np.array([10, 11])],
+                7], dtype=object)
+HS6p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                 [1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 13, 10, np.array([11, 12])], 7], dtype=object)
+HS7 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
+                [1, np.array([2, 3]), np.array([4, 5]), 13, 14, 10, np.array([11, 12]), 6, np.array([7, 8, 9])],
+                4], dtype=object)
 HS8 = np.array(
     [[0, 1, 2, 3, 4, 5, 6, 7], [1, np.array([2, 3]), np.array([4, 5]), 11, 12, 8, np.array([9, 10]), np.array([6, 7])],
      4], dtype=object)
+HS9 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
+                [1, 2, np.array([3, 4]), 5, 6, 7, 8, 11, np.array([ 9, 10])], 8], dtype=object)
+HS9p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
+                 [1, 2, np.array([3, 4]), 5, 6, 7, np.array([8, 9]), 12, np.array([10, 11])], 8], dtype=object)
 HS11 = np.array([[0, 1, 2, 3, 4], [1, 2, 3, 5, 4], 3], dtype=object)
+HS12 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                 [1, 2, 5, np.array([6, 7, 8]), 21, 20, 9, np.array([10, 11]), 12, 16,
+                  np.array([17, 18]), 19, 13, 14, 15, 22, np.array([3, 4])], 15], dtype=object)
+HS12p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                 [1, 2, 5, np.array([6, 7, 8]), 22, 21, 9, np.array([10, 11]), 12, 17,
+                  np.array([18, 19]), 20, 13, np.array([15, 16]), 14, 23, np.array([3, 4])], 15], dtype=object)
 HS13 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                  [1, 2, 15, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, 13, 14, np.array([10, 11])], 2],
                 dtype=object)
+HS13p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                  [1, 2, 16, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, np.array([14, 15]), 13,
+                   np.array([10, 11])], 2], dtype=object)
 HS14 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
                  [1, 2, np.array([3, 4]), 5, 6, 7, 8, 13, np.array([14, 15]), 12, 17, 16, 9, np.array([10, 11])], 10],
                 dtype=object)
+HS14p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                  [1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 14, np.array([15, 16]), 13, 18, 17, 10,
+                   np.array([11, 12])], 10], dtype=object)
 HS16 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                  [1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, 13, 14, 15, 16, 8, np.array([9, 10])], 10],
                 dtype=object)
+HS16p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                  [1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, np.array([14, 15]), 13, 16, 17, 8,
+                   np.array([9, 10])], 10], dtype=object)
 HS17 = np.array([[0, 1, 2, 3], [1, 2, 3, 4], 3], dtype=object)
 HS18 = np.array([[0, 1, 2, 3, 4], [1, 2, np.array([4, 5]), 6, 3], 3], dtype=object)
 HS19 = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], 5], dtype=object)
+HS19p = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 3, np.array([5, 6]), 4, 7], 5], dtype=object)
 HS20 = np.array(
     [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 2, 3, 4, 5, np.array([12, 13]), 14, 8, 9, 10, 11, np.array([6, 7])],
      6], dtype=object)
+HS20p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                  [1, 2, 3, 4, 5, np.array([13, 14]), 15, 8, 9, np.array([11, 12]), 10, np.array([6, 7])], 6],
+                 dtype=object)
 HS21 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                  [1, 9, np.array([10, 11]), 15, 12, np.array([13, 14]), 4, 5, 7, 8, 6, np.array([2, 3])], 3],
                 dtype=object)
@@ -434,23 +472,41 @@ HS22 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 5, 6, 7, np.array([
                 dtype=object)
 HS23 = np.array([[0, 1, 2, 3], [1, 2, 4, 3], 2], dtype=object)
 HS24 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 9, 6, 7, 8, 3], 3], dtype=object)
+HS24p = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 10, 6, np.array([8, 9]), 7, 3], 3], dtype=object)
+HS25 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, np.array([6, 7]), 8, 9], 7], dtype=object)
+HS25p = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 3, 6, np.array([7, 8]), 9, 10], 7], dtype=object)
 HS26 = np.array([[0, 1, 2, 3], [1, 2, np.array([3, 4]), 5], 3], dtype=object)
 HS27 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                  [1, np.array([2, 3]), 4, 5, 6, 7, 11, np.array([12, 13]), 14, 8, np.array([9, 10])], 8], dtype=object)
+HS27p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                  [1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, 12, np.array([13, 14]), 15, 9, np.array([10, 11])],
+                  8], dtype=object)
 HS28 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, np.array([6, 7]), 8, 9, np.array([4, 5]), 10, 2, 3], 5], dtype=object)
 HS29 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                  [1, 2, np.array([16, 17]), 18, 6, 5, 7, np.array([10, 11]), np.array([12, 13]), np.array([14, 15]),
                   np.array([8, 9]), np.array([3, 4])], 3], dtype=object)
 HS30 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
                  [1, 12, 13, 14, 15, np.array([10, 11]), 6, 7, 8, 9, 16, 2, 3, 4, 5], 10], dtype=object)
+HS30p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                  [1, 13, 14, 15, 16, np.array([11, 12]), 6, 7, np.array([9, 10]), 8, 17, 2, 3, 4, 5], 10],
+                 dtype=object)
 HS32 = np.array(
     [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, np.array([2, 3]), 4, 5, 6, 7, np.array([8, 9]), 10, np.array([11, 12]), 13],
      9], dtype=object)
+HS32p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                  [1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, np.array([9, 10]), 11, np.array([12, 13]), 14], 9],
+                 dtype=object)
 HS34 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
                  [1, 11, 12, 13, 22, np.array([23, 24]), 21, np.array([25, 26]), 27, np.array([19, 20]), 15, 16, 17, 18,
                   14, 10, 6, 7, 8, 9, np.array([4, 5]), np.array([2, 3])], 8], dtype=object)
+HS34p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+                  [1, 12, 13, 14, 24, np.array([25, 26]), 23, np.array([27, 28]), 29, np.array([21, 22]), 16, 17,
+                   np.array([19, 20]), 18, 15, 11, 6, 7, np.array([9, 10]), 8, np.array([4, 5]), np.array([2, 3])], 8],
+                 dtype=object)
 HS35 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 2, np.array([4, 5]), 6, 7, 8, 9, 10, 12, 13, 11, 3], 9],
                 dtype=object)
+HS35p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                  [1, 2, np.array([4, 5]), 6, 7, np.array([9, 10]), 8, 11, 13, 14, 12, 3], 9], dtype=object)
 
 
 def def_per(k, n):
@@ -1275,9 +1331,11 @@ def bead_coords(bead, conf, mol):
     total = 0.0
     for atom in bead:
         mass = mol.GetAtomWithIdx(atom).GetMass()
-        coords += conf.GetAtomPosition(atom) * mass
+        # coords += conf.GetAtomPosition(atom) * mass
+        coords += conf.GetAtomPosition(atom)
         total += mass
-    coords /= (total * 10.0)
+    # coords /= (total * 10.0)
+    coords /= (len(bead) * 10.0)
 
     return coords
 
@@ -1292,6 +1350,12 @@ def check_arguments(PATH, CG_PATH):
     # additionally checks, if files are going to be overwritten
     if not os.path.exists(PATH):
         print(f"Error: The input directory '{PATH}' does not exist.")
+        abort_script()
+
+    try:
+        os.makedirs(CG_PATH, exist_ok=True)
+    except OSError as e:
+        print(f"Error: The output directory '{CG_PATH}' could not be created. {e}")
         abort_script()
 
     output_prefix = 'HS_'
@@ -1360,7 +1424,7 @@ def main():
     for i in tqdm(range(len(merged_smiles))):
         smi = merged_smiles[i]
         # print(f"Molecule {i + 1}")
-        mol_name = 'MOL'
+        # mol_name = 'MOL'
         mol = Chem.MolFromSmiles(smi)
 
         matched_maps, matched_beads = get_smarts_matches(mol)
@@ -1369,9 +1433,9 @@ def main():
         beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
                                  vsomm_lists[i])
         ring_beads = determine_ring_beads(ring_atoms, beads)
-        non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
-        A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
-        path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
+        # non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
+        # A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
+        # path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
         # all_smi = get_smiles(beads, mol)
         all_smi = len(beads) * [[]]
 
@@ -1486,6 +1550,7 @@ def main():
     print(
         f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
         + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
 
 if __name__ == "__main__":
     main()
