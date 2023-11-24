@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __status__ = "Development"
 
 import os
@@ -737,7 +737,7 @@ def get_largest_index(input_list):
     for element in input_list:
         if isinstance(element, list) or isinstance(element, np.ndarray):
             max_value = max(max_value, get_largest_index(element))
-        elif isinstance(element, int):
+        else:
             max_value = max(max_value, element)
 
     return max_value
@@ -1504,13 +1504,23 @@ def main():
     n.trajectory.add_transformations(*workflow)
 
     # save mapped coordinates with calcium ions
-    CA = u.select_atoms("resname CA2+")
-    for i in range(len(CA.atoms)):
-        resids.append(len(sequence) + i + 1)
-        resnames.append("CA")
-        names_gro.append("CA")
-    # merge with calcium ions
-    merged = mda.Merge(n.select_atoms("all"), CA)
+    ions = u.select_atoms("resname CA2+ or resname NA+")
+    if len(ions) > 0:
+        if ions.resnames[0] == "CA2+":
+            resname = "CA"
+        elif ions.resnames[0] == "NA+":
+            resname = "NA"
+        else:
+            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            abort_script()
+        for i in range(len(ions.atoms)):
+            resids.append(len(sequence) + i + 1)
+            resnames.append(resname)
+            names_gro.append(resname)
+        # merge with calcium ions
+        merged = mda.Merge(n.select_atoms("all"), ions)
+    else:
+        merged = n
     # add dimensions
     merged.dimensions = u.dimensions
     # add resnames, etc.
@@ -1523,14 +1533,13 @@ def main():
     merged.atoms.write(f'{CG_PATH}/mapped.gro')
 
     # create 'water.pdb' if not already present
-    water_pdb = """ITLE     Gromacs Runs On Most of All Computer Systems    
-    REMARK    THIS IS A SIMULATION BOX    
-    CRYST1   10.000   10.000   10.000  90.00  90.00  90.00 P 1           1    
-    MODEL        1    
-    ATOM      1  W     W     1       0.000   0.000   0.000  1.00  0.00                
-    TER    
-    ENDMDL   
-    """
+    water_pdb = """TITLE     Gromacs Runs On Most of All Computer Systems    
+REMARK    THIS IS A SIMULATION BOX    
+CRYST1   10.000   10.000   10.000  90.00  90.00  90.00 P 1           1    
+MODEL        1    
+ATOM      1  W     W     1       0.000   0.000   0.000  1.00  0.00                
+TER    
+ENDMDL"""
     file = "water.pdb"
     if not os.path.exists(f"{CG_PATH}/{file}"):
         f = open(f"{CG_PATH}/{file}", "w")
