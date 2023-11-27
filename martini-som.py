@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __status__ = "Development"
 
 import os
@@ -12,10 +12,8 @@ import numpy as np
 from rdkit import Chem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-# from scipy.sparse.csgraph import floyd_warshall
 import random
 import math
-import re
 import warnings
 from tqdm import tqdm
 
@@ -571,7 +569,7 @@ def read_itps(PATH, GRO):
         abort_script()
 
     u = mda.Universe(GRO)  # to get correct resnames
-    n_gro = len(u.select_atoms("not (resname SOLV or resname CA2+ or resname NA+)"))
+    n_gro = len(u.select_atoms("not (resname SOLV or resname SOL or resname CA2+ or resname NA+)"))
 
     first_atoms = []
     last_atoms = []
@@ -610,6 +608,8 @@ def read_itps(PATH, GRO):
             first_add.append(2)
         else:
             print(f'No rule for atom type {u1.atoms[0].type}.')
+            first_atoms.append('H')
+            first_add.append(0)
         if u1.atoms[-1].type == 'HC':
             last_atoms.append('H')
             last_add.append(1)
@@ -628,7 +628,10 @@ def read_itps(PATH, GRO):
             else:
                 last_atoms.append('O')
                 last_add.append(2)
-        continue
+        else:
+            print(f'No rule for atom type {u1.atoms[0].type}.')
+            last_atoms.append('H')
+            last_add.append(0)
 
     if n != n_gro:
         print(f"Error: Number of HS atoms in '{GRO}' does not match with the number of atoms from the topology files "
@@ -993,19 +996,6 @@ def get_ring_atoms(mol):
     return [list(ring) for ring in ring_systems]
 
 
-def get_smiles(beads, mol):
-    """ 
-    Imported and modified from the cg_param_m3.py script
-    """
-    # loops through beads and determines smiles
-    all_smi = []
-    for i, bead in enumerate(beads):
-        bead_smi = get_smi(bead, mol)
-        all_smi.append(bead_smi)
-
-    return all_smi
-
-
 def get_coords(mol, beads):
     """ 
     Imported and modified from the cg_param_m3.py script
@@ -1032,62 +1022,7 @@ def get_coords(mol, beads):
     return cg_coords_a
 
 
-def get_smi(bead, mol):
-    """ 
-    Imported and modified from the cg_param_m3.py script
-    """
-    # gets fragment smiles from list of atoms
-
-    bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead)
-
-    # Work out aromaticity by looking for lowercase c and heteroatoms
-    lc = re.compile('[cn([nH\])os]+')
-    lc = string_lst = ['c', '\\[nH\\]', '(?<!\\[)n', 'o']
-    lowerlist = re.findall(r"(?=(" + '|'.join(string_lst) + r"))", bead_smi)
-
-    # Construct test rings for aromatic fragments
-    if lowerlist:
-        frag_size = len(lowerlist)
-        # For two atoms + substituents, make a 3-membered ring
-        if frag_size == 2:
-            subs = bead_smi.split(''.join(lowerlist))
-            for i in range(len(subs)):
-                if subs[i] != '':
-                    subs[i] = '({})'.format(subs[i])
-            try:
-                bead_smi = 'c1c{}{}{}{}cc1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1])
-            except:
-                bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
-            if not Chem.MolFromSmiles(bead_smi):  # If fragment isn't kekulisable use 5-membered ring
-                bead_smi = 'c1c{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1])
-        # For three atoms + substituents, make a dimer
-        elif len(lowerlist) == 3:
-            split1 = bead_smi.split(''.join(lowerlist[:2]))
-            split2 = split1[1].split(lowerlist[2])
-            subs = [split1[0], split2[0], split2[1]]
-            for i in range(len(subs)):
-                if subs[i] != '' and subs[i][0] != '(':
-                    subs[i] = '({})'.format(subs[i])
-            try:
-                bead_smi = 'c1c{}{}{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1], lowerlist[2],
-                                                      subs[2])
-            except:
-                bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
-
-            if not Chem.MolFromSmiles(bead_smi):
-                bead_smi = 'c1{}{}{}{}{}{}c1'.format(lowerlist[0], subs[0], lowerlist[1], subs[1], lowerlist[2],
-                                                     subs[2])
-
-    if not Chem.MolFromSmiles(bead_smi):
-        bead_smi = Chem.rdmolfiles.MolFragmentToSmiles(mol, bead, kekuleSmiles=True)
-
-    # Standardise SMILES for lookup
-    bead_smi = Chem.rdmolfiles.MolToSmiles(Chem.MolFromSmiles(bead_smi))
-
-    return bead_smi
-
-
-def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
+def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
               masses, resname_list, itp_name):
     """
     Imported and modified from the cg_param_m3.py script
@@ -1100,9 +1035,9 @@ def write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mo
         itp.write('\n[atoms]\n')
         for b in range(len(bead_types)):
             itp.write(
-                '{:5d}{:>6}{:5d}{:>5}{:>5}{:5d}{:>10.3f}{:>10.3f};{}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
+                '{:5d}{:>6}{:5d}{:>5}{:>5}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
                                                                                'CG' + str(b + 1), b + 1, charges[b],
-                                                                               masses[b], all_smi[b]))
+                                                                               masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
         angles = write_angles(itp, bonds, constraints, beads, mol, n_confs)
         if dihedrals:
@@ -1423,21 +1358,13 @@ def main():
     print(f' - Generating output files for {len(merged_smiles)} HS molecules.')
     for i in tqdm(range(len(merged_smiles))):
         smi = merged_smiles[i]
-        # print(f"Molecule {i + 1}")
-        # mol_name = 'MOL'
         mol = Chem.MolFromSmiles(smi)
 
-        matched_maps, matched_beads = get_smarts_matches(mol)
         ring_atoms = get_ring_atoms(mol)
         A_cg = create_A_matrix(sequence[i], fragments_connections, fragments_lengths, FRG_same)
         beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
                                  vsomm_lists[i])
         ring_beads = determine_ring_beads(ring_atoms, beads)
-        # non_ring = [b for b in range(len(beads)) if not any(b in ring for ring in ring_beads)]
-        # A_atom = np.asarray(Chem.GetAdjacencyMatrix(mol))
-        # path_matrix = floyd_warshall(csgraph=A_atom, directed=False)
-        # all_smi = get_smiles(beads, mol)
-        all_smi = len(beads) * [[]]
 
         charges = determine_charges(sequence[i], fragments_charges)
         bead_types = determine_bead_types(sequence[i], fragments_bead_types)
@@ -1451,7 +1378,7 @@ def main():
         virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
         resname_list = create_resname_list(sequence[i], fragments_lengths)
-        write_itp(bead_types, coords0, charges, all_smi, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
+        write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
                   resname_list, f'{CG_PATH}/{itp_list[i]}')
         mapping.append(beads)
         resnames.append(resname_list)
@@ -1556,9 +1483,10 @@ ENDMDL"""
             f.write(file_data)
 
     print('- Done')
-    print(
-        f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
-        + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+    if N > 0:
+        print(
+            f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
+            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
 
 
 if __name__ == "__main__":
