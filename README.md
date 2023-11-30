@@ -28,6 +28,7 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Remove redundant functions and dependencies on other packages
 - [X] Add more information to the visual output
 - [ ] Add functionality for switching between COM and COG mapping
+- [ ] Parallelization support
 - [ ] Rewrite and optimize functions from cg_param_m3.py
 - [ ] Determine more accurate beads for first and last groups in molecules
 
