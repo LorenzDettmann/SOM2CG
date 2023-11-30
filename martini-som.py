@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __status__ = "Development"
 
 import os
@@ -944,34 +944,6 @@ def create_resname_list(sequence, fragments_lengths):
         length = fragments_lengths[FRG]
         resnames.extend([FRG] * length)
     return resnames
-
-
-def get_smarts_matches(mol):
-    """ 
-    Imported and modified from the cg_param_m3.py script
-    """
-    # Get matches to SMARTS strings
-    smarts_strings = {
-        'S([O-])(=O)(=O)O': 'Q2',
-        '[S;!$(*OC)]([O-])(=O)(=O)': 'SQ4',  # SQ4
-        'C[N+](C)(C)C': 'Q2',
-        'CC[N+](C)(C)[O-]': 'P6'
-        # 'C(=O)O' : 'P1'#SP1
-        # 'CC' : 'C2',
-        # 'OO' : 'P5'
-        # 'CCC' : 'C2',
-        # 'CCCC': 'C2'
-    }
-    # Add function to get rid of groups with duplicate atoms
-    matched_maps = []
-    matched_beads = []
-    for smarts in smarts_strings:
-        matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
-        for match in matches:
-            matched_maps.append(list(match))
-            matched_beads.append(smarts_strings[smarts])
-
-    return matched_maps, matched_beads
 
 
 def get_ring_atoms(mol):
