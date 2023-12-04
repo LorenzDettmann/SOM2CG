@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 __status__ = "Development"
 
 import os
@@ -1009,7 +1009,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write('\n[atoms]\n')
         for b in range(len(bead_types)):
             itp.write(
-                '{:5d}{:>6}{:5d}{:>5}{:>5}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
+                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
                                                                                'CG' + str(b + 1), b + 1, charges[b],
                                                                                masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
