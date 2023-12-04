@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __status__ = "Development"
 
 import os
@@ -590,8 +590,10 @@ def read_itps(PATH, GRO):
         itp_list.append(f'{file}')
         u1 = mda.Universe(f'{PATH}/{file}', topology_format='ITP')
         # read out sequence of fragments, HS1 has C1 and CA
-        sequence.append(u.atoms[np.add(
-            u1.select_atoms('name C1 or name CA and not (name CA and resname HS1)').indices, n)].resnames)
+        C1_CA_atoms = u.atoms[np.add(u1.select_atoms('name C1 or name CA').indices, n)]
+        C1_CA_atoms -= C1_CA_atoms.select_atoms('name CA and resname HS1')
+        sequence.append(C1_CA_atoms.resnames)
+
         n += len(u1.atoms)  # index for last atom
         if u1.atoms[0].type == 'HC':
             first_atoms.append('H')
