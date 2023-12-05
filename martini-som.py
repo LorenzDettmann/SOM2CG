@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 __status__ = "Development"
 
 import os
@@ -482,7 +482,7 @@ HS27p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 HS28 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, np.array([6, 7]), 8, 9, np.array([4, 5]), 10, 2, 3], 5], dtype=object)
 HS29 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                  [1, 2, np.array([16, 17]), 18, 6, 5, 7, np.array([10, 11]), np.array([12, 13]), np.array([14, 15]),
-                  np.array([8, 9]), np.array([3, 4])], 3], dtype=object)
+                  np.array([8, 9]), np.array([3, 4])], 10], dtype=object)
 HS30 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
                  [1, 12, 13, 14, 15, np.array([10, 11]), 6, 7, 8, 9, 16, 2, 3, 4, 5], 10], dtype=object)
 HS30p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
@@ -728,7 +728,7 @@ def translate_mapping(mapping, vsomm_list):
     translation = []
     for i in mapping:
         new_ind = vsomm_list[i]
-        if type(new_ind) == np.ndarray or type(new_ind) == list:
+        if isinstance(new_ind, list) or isinstance(new_ind, np.ndarray):
             for j in new_ind:
                 translation.append(j)
         else:
@@ -751,7 +751,7 @@ def get_largest_index(input_list):
 def return_index(vsomm_list, atom_of_interest):
     # returns index of atom in list (even, if atom of interest is incorporated in list of list)
     for i, atom in enumerate(vsomm_list):
-        if type(atom) == list or type(atom) == np.ndarray:
+        if isinstance(atom, list) or isinstance(atom, np.ndarray):
             for sub_atom in atom:
                 if sub_atom == atom_of_interest:
                     index = i
