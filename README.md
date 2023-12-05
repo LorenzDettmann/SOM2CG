@@ -22,6 +22,7 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 ```
 
 ## Roadmap
+### Important / Nice-to-have
 - [X] Include options for changing the standard input and output directories, as well as `nconf`
 - [X] Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
 - [X] Generalize the script for use with sodium ions and with no ions
@@ -29,8 +30,12 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Add more information to the visual output
 - [ ] Add functionality for switching between COM and COG mapping
 - [ ] Parallelization support
+- [ ] Option to output only the coarse-grained structure file
+- [ ] More accurate beads for first and last groups in molecules
+### Optional
 - [ ] Rewrite and optimize functions from cg_param_m3.py
-- [ ] Determine more accurate beads for first and last groups in molecules
+- [ ] Rewrite "translate_atoms" function
+- [ ] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggstions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
