@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.3.6"
+__version__ = "0.4.0"
 __status__ = "Development"
 
 import os
@@ -970,7 +970,7 @@ def get_ring_atoms(mol):
     return [list(ring) for ring in ring_systems]
 
 
-def get_coords(mol, beads):
+def get_coords(mol, beads, map):
     """ 
     Imported and modified from the cg_param_m3.py script
     """
@@ -983,12 +983,16 @@ def get_coords(mol, beads):
         coord = np.array([0.0, 0.0, 0.0])
         total = 0.0
         for atom in bead:
-            mass = mol.GetAtomWithIdx(atom).GetMass()
-            # coord += conf.GetAtomPosition(atom)*mass
-            coord += conf.GetAtomPosition(atom)
-            total += mass
-        # coord /= (total*10.0)
-        coord /= (len(bead) * 10.0)
+            if map == 'com':
+                mass = mol.GetAtomWithIdx(atom).GetMass()
+                coord += conf.GetAtomPosition(atom)*mass
+                total += mass
+            else:
+                coord += conf.GetAtomPosition(atom)
+        if map == 'com':
+            coord /= (total*10.0)
+        else:
+            coord /= (len(bead) * 10.0)
         cg_coords.append(coord)
 
     cg_coords_a = np.array(cg_coords)
@@ -1305,12 +1309,15 @@ def main():
                         help='Path to the output directory with the coarse-grained topology files')
     parser.add_argument('-n_confs', type=positive_integer, default=50,
                         help='Number of conformers to generate for the parametrization')
+    parser.add_argument('-map', default='cog', choices=['cog', 'com'],
+                        help='Apply center of geometry (cog) or center of mass (com) mapping')
 
     args = parser.parse_args()
     # input and output locations
     PATH = args.input_dir
     GRO = f'{PATH}/min_system.gro'
     CG_PATH = args.output_dir
+    map = args.map
 
     check_arguments(PATH, CG_PATH)
 
@@ -1333,7 +1340,8 @@ def main():
     for i in tqdm(range(len(merged_smiles))):
         smi = merged_smiles[i]
         mol = Chem.MolFromSmiles(smi)
-
+        print(f"{itp_list[i]}")
+        print(f"{vsomm_lists[i]}")
         ring_atoms = get_ring_atoms(mol)
         A_cg = create_A_matrix(sequence[i], fragments_connections, fragments_lengths, FRG_same)
         beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
@@ -1347,7 +1355,7 @@ def main():
         n_confs = args.n_confs
         Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
         Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-        coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
+        coords0 = get_coords(mol, beads, map)  # coordinates of energy minimized molecules
 
         virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
