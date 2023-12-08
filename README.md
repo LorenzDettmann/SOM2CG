@@ -28,7 +28,7 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Generalize the script for use with sodium ions and with no ions
 - [X] Remove redundant functions and dependencies on other packages
 - [X] Add more information to the visual output
-- [ ] Add functionality for switching between COM and COG mapping
+- [X] Add functionality for switching between COM and COG mapping
 - [ ] Parallelization support
 - [ ] Option to output only the coarse-grained structure file
 - [ ] More accurate beads for first and last groups in molecules
