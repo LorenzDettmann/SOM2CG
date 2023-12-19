@@ -18,7 +18,7 @@ git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
 You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths
 using the following arguments:
 ```bash
-python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers'] [-map '"cog" or "com" mapping']
+python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers'] [-map '"cog" or "com" mapping'] [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
 ```
 
 ## Roadmap
@@ -29,8 +29,8 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Remove redundant functions and dependencies on other packages
 - [X] Add more information to the visual output
 - [X] Add functionality for switching between COM and COG mapping
+- [X] Option to output only the coarse-grained structure file
 - [ ] Parallelization support
-- [ ] Option to output only the coarse-grained structure file
 - [ ] More accurate beads for first and last groups in molecules
 ### Optional
 - [X] Rewrite "translate_atoms" function
