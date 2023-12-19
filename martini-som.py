@@ -888,7 +888,7 @@ def get_ring_atoms(mol):
     return [list(ring) for ring in ring_systems]
 
 
-def get_coords(mol, beads, map):
+def get_coords(mol, beads):
     """ 
     Imported and modified from the cg_param_m3.py script
     """
@@ -898,35 +898,20 @@ def get_coords(mol, beads, map):
 
     cg_coords = []
     for bead in beads:
-        coord = np.array([0.0, 0.0, 0.0])
-        total = 0.0
-        for atom in bead:
-            if map == 'com':
-                mass = mol.GetAtomWithIdx(atom).GetMass()
-                coord += conf.GetAtomPosition(atom) * mass
-                total += mass
-            else:
-                coord += conf.GetAtomPosition(atom)
-        if map == 'com':
-            coord /= (total * 10.0)
-        else:
-            coord /= (len(bead) * 10.0)
-        cg_coords.append(coord)
+        cg_coords.append(bead_coords(bead, conf, mol))
 
-    cg_coords_a = np.array(cg_coords)
-
-    return cg_coords_a
+    return np.array(cg_coords)
 
 
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, itp_name):
+              masses, resname_list, itp_name, name):
     """
     Imported and modified from the cg_param_m3.py script
     """
     # writes gromacs topology file
     with open(itp_name, 'w') as itp:
         itp.write('[moleculetype]\n')
-        itp.write('MOL    1\n')
+        itp.write(f'{name}    1\n')
         # write atoms section
         itp.write('\n[atoms]\n')
         for b in range(len(bead_types)):
@@ -1161,12 +1146,16 @@ def bead_coords(bead, conf, mol):
     coords = np.array([0.0, 0.0, 0.0])
     total = 0.0
     for atom in bead:
-        mass = mol.GetAtomWithIdx(atom).GetMass()
-        # coords += conf.GetAtomPosition(atom) * mass
-        coords += conf.GetAtomPosition(atom)
-        total += mass
-    # coords /= (total * 10.0)
-    coords /= (len(bead) * 10.0)
+        if map == 'com':
+            mass = mol.GetAtomWithIdx(atom).GetMass()
+            coords += conf.GetAtomPosition(atom) * mass
+            total += mass
+        else:
+            coords += conf.GetAtomPosition(atom)
+    if map == 'com':
+        coords /= (total * 10.0)
+    else:
+        coords /= (len(bead) * 10.0)
 
     return coords
 
@@ -1211,69 +1200,7 @@ def positive_integer(value):
     return int_value
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Martini SOM - A tool for converting atomistic Soil Organic Matter '
-                                                 '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
-                                                 'to a coarse-grained representation, compatible with the '
-                                                 'Martini 3 force field.', add_help=False)
-
-    # arguments
-    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
-                        help='Shows the version of the script')
-    parser.add_argument('-h', '--help', action='help', help='Shows this help message')
-    parser.add_argument('-input_dir', default=f'{os.path.dirname(os.path.abspath(__file__))}',
-                        help='Path to the input directory with the atomistic topology files')
-    parser.add_argument('-output_dir', default='INIT_cg',
-                        help='Path to the output directory with the coarse-grained topology files')
-    parser.add_argument('-n_confs', type=positive_integer, default=50,
-                        help='Number of conformers to generate for the parametrization')
-    parser.add_argument('-map', default='cog', choices=['cog', 'com'],
-                        help='Apply center of geometry (cog) or center of mass (com) mapping')
-
-    args = parser.parse_args()
-    # input and output locations
-    PATH = args.input_dir
-    GRO = f'{PATH}/min_system.gro'
-    CG_PATH = args.output_dir
-    map = args.map
-
-    check_arguments(PATH, CG_PATH)
-
-    first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(PATH, GRO)
-
-    vsomm_lists = []
-    for i, sequence in enumerate(sequences):
-        vsomm_list = create_vsomm_list(sequence, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
-        vsomm_lists.append(vsomm_list)
-
-    mapping = []
-    resnames = []
-    print(f' - Generating output files for {len(sequences)} HS molecules.')
-    for i in tqdm(range(len(sequences))):
-        mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
-        ring_atoms = get_ring_atoms(mol)
-        A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
-        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
-                                 vsomm_lists[i])
-        ring_beads = determine_ring_beads(ring_atoms, beads)
-
-        charges = determine_charges(sequences[i], fragments_charges)
-        bead_types = determine_bead_types(sequences[i], fragments_bead_types)
-
-        mol = Chem.AddHs(mol)
-        n_confs = args.n_confs
-        Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000), useRandomCoords=True)
-        Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-        coords0 = get_coords(mol, beads, map)  # coordinates of energy minimized molecules
-
-        virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
-        masses = get_standard_masses(bead_types, virtual)
-        resname_list = create_resname_list(sequences[i], fragments_lengths)
-        write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                  resname_list, f'{CG_PATH}/{itp_list[i]}')
-        mapping.append(beads)
-        resnames.append(resname_list)
-
+def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames):
     print(f"- Generating initial structure file from '{GRO}'.")
     # add bonds for unwrapping
     # load atomistic coordinates
@@ -1365,18 +1292,85 @@ ENDMDL"""
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
 
-    for file in itp_list:
-        with open(f"{CG_PATH}/{file}", "r") as f:
-            file_data = f.read()
-        file_data = file_data.replace(f"MOL    1", f"{file[:-4]}    1")
-        with open(f"{CG_PATH}/{file}", "w") as f:
-            f.write(file_data)
-
     print('- Done')
     if N > 0:
         print(
             f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
             + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Martini SOM - A tool for converting atomistic Soil Organic Matter '
+                                                 '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
+                                                 'to a coarse-grained representation, compatible with the '
+                                                 'Martini 3 force field.', add_help=False)
+
+    # arguments
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
+                        help='Shows the version of the script')
+    parser.add_argument('-h', '--help', action='help', help='Shows this help message')
+    parser.add_argument('-input_dir', default=f'{os.path.dirname(os.path.abspath(__file__))}',
+                        help='Path to the input directory with the atomistic topology files')
+    parser.add_argument('-output_dir', default='INIT_cg',
+                        help='Path to the output directory with the coarse-grained topology files')
+    parser.add_argument('-n_confs', type=positive_integer, default=50,
+                        help='Number of conformers to generate for the parametrization')
+    parser.add_argument('-map', default='cog', choices=['cog', 'com'],
+                        help='Apply center of geometry (cog) or center of mass (com) mapping')
+    parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
+                        help='Parametrize the molecules, or only output the mapped structure file')
+
+    args = parser.parse_args()
+    # input and output locations
+    PATH = args.input_dir
+    GRO = f'{PATH}/min_system.gro'
+    CG_PATH = args.output_dir
+    map = args.map
+    par = args.parametrize
+
+    check_arguments(PATH, CG_PATH)
+
+    first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(PATH, GRO)
+
+    vsomm_lists = []
+    for i, sequence in enumerate(sequences):
+        vsomm_list = create_vsomm_list(sequence, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
+        vsomm_lists.append(vsomm_list)
+
+    mapping = []
+    resnames = []
+    if par == 'yes':
+        print(f' - Generating output files for {len(sequences)} HS molecules.')
+        loop = tqdm(range(len(sequences)))
+    else:
+        loop = range(len(sequences))
+    for i in loop:
+        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
+                                 vsomm_lists[i])
+        mapping.append(beads)
+        resname_list = create_resname_list(sequences[i], fragments_lengths)
+        resnames.append(resname_list)
+
+        if par == 'yes':
+            mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
+            ring_atoms = get_ring_atoms(mol)
+            A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
+            ring_beads = determine_ring_beads(ring_atoms, beads)
+            charges = determine_charges(sequences[i], fragments_charges)
+            bead_types = determine_bead_types(sequences[i], fragments_bead_types)
+            mol = Chem.AddHs(mol)
+            n_confs = args.n_confs
+            Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
+                                            useRandomCoords=True)
+            Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
+            coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
+            virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
+            masses = get_standard_masses(bead_types, virtual)
+
+            write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
+                      resname_list, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4])
+
+    generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames)
 
 
 if __name__ == "__main__":
