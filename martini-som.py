@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.0"
+__version__ = "0.4.0_alt"
 __status__ = "Development"
 
 import os
@@ -17,68 +17,58 @@ import math
 import warnings
 from tqdm import tqdm
 
-# from tqdm import tqdm
 warnings.filterwarnings("ignore", category=Warning)
 
-# fragment names
-names = np.array(['HS1', 'HS2', 'HS3', 'HS3p', 'HS4', 'HS4p', 'HS6', 'HS6p', 'HS7',
-                  'HS8', 'HS9', 'HS9p', 'HS11', 'HS12', 'HS12p', 'HS13', 'HS13p',
-                  'HS14', 'HS14p', 'HS16', 'HS16p', 'HS17', 'HS18', 'HS19', 'HS19p',
-                  'HS20', 'HS20p', 'HS20fp', 'HS21', 'HS22', 'HS23', 'HS24', 'HS24p',
-                  'HS25', 'HS25p', 'HS26', 'HS27', 'HS27p', 'HS28', 'HS29', 'HS30',
-                  'HS30p', 'HS30fp', 'HS32', 'HS32p', 'HS34', 'HS34p', 'HS35',
-                  'HS35p'], dtype=object)
-
 # smiles for each fragment
-smiles = ['AC(=O)C(O)C(E)=O',
-          'ACX=CC(N)=C(O(E))C=CX',
-          'AC(CCO)C(E)C(C=CCC([O-])=O)CC(=O)[O-]',
-          'AC(CCO)C(E)C(C=CCC(O)=O)CC(=O)O',
-          'AC(CO)C(E)C(C=CC([O-])=O)CC([O-])=O',
-          'AC(CO)C(E)C(C=CC(O)=O)CC(O)=O',
-          'AC(CO)C(C([O-])=O)C(E)CO',
-          'AC(CO)C(C(O)=O)C(E)CO',
-          'ACX=CC=C(O(E))C(O)=CX(N)',
-          'ACX=CC=C(O(E))C(O)=CX',
-          'AC(CO)C(C(=O)[O-])C(O)(E)',
-          'AC(CO)C(C(=O)O)C(O)(E)',
-          'AC(=O)OC(E)=O',
-          'ACX=C(C(N)=C(CY=CXC(=C(C(O)OY)(C([O-])=O)))(O(E)))O',
-          'ACX=C(C(N)=C(CY=CXC(=C(C(O)OY)(C(O)=O)))(O(E)))O',
-          'AC(=O)C(E)C(O)C(O)C(C([O-])=O)O',
-          'AC(=O)C(E)C(O)C(O)C(C(O)=O)O',
-          'ACX=C(O)C(C([O-])=O)=C(O)C(C(E)=O)=CX(O)',
-          'ACX=C(O)C(C(O)=O)=C(O)C(C(E)=O)=CX(O)',
-          'ACX=C(O)C(S)=C(C([O-])=O)C(O(E))=CX(O)',
-          'ACX=C(O)C(S)=C(C(O)=O)C(O(E))=CX(O)',
-          'ACCCC(E)',
-          'ACC(NC(E))=O',
-          'ACC(C([O-])=O)C(E)',
-          'ACC(C(O)=O)C(E)',
-          'ACX=C(C([O-])=O)C=C(E)C(C([O-])=O)=CX',
-          'ACX=C(C([O-])=O)C=C(E)C(C(O)=O)=CX',
-          'ACX=C(C(O)=O)C=C(E)C(C(O)=O)=CX',
-          'ACX=C(O)C(E)=C(O)C(C(OC)=O)=CX',
-          'ACX=C(OC)C=C(E)C(OC)=CX(OC)',
-          'ACC(C(E))=O',
-          'ACC(NC(E)C([O-])=O)=O',
-          'ACC(NC(E)C(O)=O)=O',
-          'AC(C([O-])=O)C(O)CO(E)',
-          'AC(C(O)=O)C(O)CO(E)',
-          'ACC(O)C(E)',
-          'ACX=CC(C([O-])=O)=C(O)C(E)=CX(O)',
-          'ACX=CC(C(O)=O)=C(O)C(E)=CX(O)',
-          'ACX=CC(=O)C=C(E)CX(=O)',
-          'ACX=C(C=C(CY=CXC(=C(C=CY))O)(E))O',
-          'ACX=C(C([O-])=O)C=C(C([O-])=O)C(E)=CX(C([O-])=O)',
-          'ACX=C(C([O-])=O)C=C(C(O)=O)C(E)=CX(C([O-])=O)',
-          'ACX=C(C(O)=O)C=C(C(O)=O)C(E)=CX(C(O)=O)',
-          'ACX=CC(C([O-])=O)=CC(O)=CX(E)',
-          'ACX=CC(C(O)=O)=CC(O)=CX(E)',
-          'ACX=CYOCZ=C(O)C(NC(E))=CC(C([O-])=O)=CZCY=C(C([O-])=O)C=CX',
-          'ACX=CYOCZ=C(O)C(NC(E))=CC(C(O)=O)=CZCY=C(C(O)=O)C=CX',
-          'ACC(NC(C([O-])=O)C(CC(E))C)=O',
-          'ACC(NC(C(O)=O)C(CC(E))C)=O']
+smiles = {
+    'HS1': 'C(=O)C(O)C=O',
+    'HS2': 'C1=CC(N)=C(O)C=C1',
+    'HS3': 'C(CCO)CC(C=CCC([O-])=O)CC(=O)[O-]',
+    'HS3p': 'C(CCO)CC(C=CCC(O)=O)CC(=O)O',
+    'HS4': 'C(CO)CC(C=CC([O-])=O)CC([O-])=O',
+    'HS4p': 'C(CO)CC(C=CC(O)=O)CC(O)=O',
+    'HS6': 'C(CO)C(C([O-])=O)CCO',
+    'HS6p': 'C(CO)C(C(O)=O)CCO',
+    'HS7': 'C1=CC=C(O)C(O)=C1(N)',
+    'HS8': 'C1=CC=C(O)C(O)=C1',
+    'HS9': 'C(CO)C(C(=O)[O-])C(O)',
+    'HS9p': 'C(CO)C(C(=O)O)C(O)',
+    'HS11': 'C(=O)OC=O',
+    'HS12': 'C1=C(C(N)=C(C2=C1C(=C(C(O)O2)(C([O-])=O)))(O))O',
+    'HS12p': 'C1=C(C(N)=C(C2=C1C(=C(C(O)O2)(C(O)=O)))(O))O',
+    'HS13': 'C(=O)CC(O)C(O)C(C([O-])=O)O',
+    'HS13p': 'C(=O)CC(O)C(O)C(C(O)=O)O',
+    'HS14': 'C1=C(O)C(C([O-])=O)=C(O)C(C=O)=C1(O)',
+    'HS14p': 'C1=C(O)C(C(O)=O)=C(O)C(C=O)=C1(O)',
+    'HS16': 'C1=C(O)C(S)=C(C([O-])=O)C(O)=C1(O)',
+    'HS16p': 'C1=C(O)C(S)=C(C(O)=O)C(O)=C1(O)',
+    'HS17': 'CCCC',
+    'HS18': 'CC(NC)=O',
+    'HS19': 'CC(C([O-])=O)C',
+    'HS19p': 'CC(C(O)=O)C',
+    'HS20': 'C1=C(C([O-])=O)C=CC(C([O-])=O)=C1',
+    'HS20p': 'C1=C(C([O-])=O)C=CC(C(O)=O)=C1',
+    'HS21': 'C1=C(O)C=C(O)C(C(OC)=O)=C1',
+    'HS22': 'C1=C(OC)C=CC(OC)=C1(OC)',
+    'HS23': 'CC(C)=O',
+    'HS24': 'CC(NCC([O-])=O)=O',
+    'HS24p': 'CC(NCC(O)=O)=O',
+    'HS25': 'C(C([O-])=O)C(O)CO',
+    'HS25p': 'C(C(O)=O)C(O)CO',
+    'HS26': 'CC(O)C',
+    'HS27': 'C1=CC(C([O-])=O)=C(O)C=C1(O)',
+    'HS27p': 'C1=CC(C(O)=O)=C(O)C=C1(O)',
+    'HS28': 'C1=CC(=O)C=CC1(=O)',
+    'HS29': 'C1=C(C=C(C2=C1C(=C(C=C2))O))O',
+    'HS30': 'C1=C(C([O-])=O)C=C(C([O-])=O)C=C1(C([O-])=O)',
+    'HS30p': 'C1=C(C([O-])=O)C=C(C(O)=O)C=C1(C([O-])=O)',
+    'HS32': 'C1=CC(C([O-])=O)=CC(O)=C1',
+    'HS32p': 'C1=CC(C(O)=O)=CC(O)=C1',
+    'HS34': 'C1=C2OC3=C(O)C(NC)=CC(C([O-])=O)=C3C2=C(C([O-])=O)C=C1',
+    'HS34p': 'C1=C2OC3=C(O)C(NC)=CC(C(O)=O)=C3C2=C(C(O)=O)C=C1',
+    'HS35': 'CC(NC(C([O-])=O)C(CC)C)=O',
+    'HS35p': 'CC(NC(C(O)=O)C(CC)C)=O'
+}
 
 fragments_mapping = {
     'HS1': [[1, 2], [3, 4, 5], [6, 7]],
@@ -399,159 +389,84 @@ FRG_O = ['HS2', 'HS7', 'HS8', 'HS12', 'HS12p', 'HS16', 'HS16p', 'HS25', 'HS25p']
 # fragments with first and last bead having the same index
 FRG_same = ['HS4', 'HS4p', 'HS11' 'HS13', 'HS13p', 'HS19', 'HS19p']
 
-# translation from RDKit to VSOMM2 + atom index before branch
-HS1 = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 3, np.array([4, 5]), 7, 6], 4], dtype=object)
-HS2 = np.array([[0, 1, 2, 3, 4, 5, 6, 7],
-                [1, np.array([6, 7]), 8, np.array([9, 10, 11]), 12, 13, np.array([4, 5]), np.array([2, 3])], 5],
-               dtype=object)
-HS3 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-                [1, 2, 3, np.array([4, 5]), 17, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], 4], dtype=object)
-HS3p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-                [1, 2, 3, np.array([4, 5]), 19, 6, 7, 8, 9, 10, np.array([12, 13]), 11, 14, 15, 16, np.array([17, 18])],
-                 4], dtype=object)
-HS4 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                [1, 2, np.array([3, 4]), 15, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 3], dtype=object)
-HS4p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                [1, 2, np.array([3, 4]), 17, 5, 6, 7, 8, np.array([10, 11]), 9, 12, 13, np.array([15, 16]), 14],
-                 3], dtype=object)
-HS6 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 2, np.array([3, 4]), 5, 6, 7, 8, 12, 9, np.array([10, 11])],
-                7], dtype=object)
-HS6p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                 [1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 13, 10, np.array([11, 12])], 7], dtype=object)
-HS7 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
-                [1, np.array([2, 3]), np.array([4, 5]), 13, 14, 10, np.array([11, 12]), 6, np.array([7, 8, 9])],
-                4], dtype=object)
-HS8 = np.array(
-    [[0, 1, 2, 3, 4, 5, 6, 7], [1, np.array([2, 3]), np.array([4, 5]), 11, 12, 8, np.array([9, 10]), np.array([6, 7])],
-     4], dtype=object)
-HS9 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
-                [1, 2, np.array([3, 4]), 5, 6, 7, 8, 11, np.array([ 9, 10])], 8], dtype=object)
-HS9p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8],
-                 [1, 2, np.array([3, 4]), 5, 6, 7, np.array([8, 9]), 12, np.array([10, 11])], 8], dtype=object)
-HS11 = np.array([[0, 1, 2, 3, 4], [1, 2, 3, 5, 4], 3], dtype=object)
-HS12 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                 [1, 2, 5, np.array([6, 7, 8]), 21, 20, 9, np.array([10, 11]), 12, 16,
-                  np.array([17, 18]), 19, 13, 14, 15, 22, np.array([3, 4])], 15], dtype=object)
-HS12p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-                 [1, 2, 5, np.array([6, 7, 8]), 22, 21, 9, np.array([10, 11]), 12, 17,
-                  np.array([18, 19]), 20, 13, np.array([15, 16]), 14, 23, np.array([3, 4])], 15], dtype=object)
-HS13 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                 [1, 2, 15, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, 13, 14, np.array([10, 11])], 2],
-                dtype=object)
-HS13p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                  [1, 2, 16, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, np.array([14, 15]), 13,
-                   np.array([10, 11])], 2], dtype=object)
-HS14 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                 [1, 2, np.array([3, 4]), 5, 6, 7, 8, 13, np.array([14, 15]), 12, 17, 16, 9, np.array([10, 11])], 10],
-                dtype=object)
-HS14p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-                  [1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 14, np.array([15, 16]), 13, 18, 17, 10,
-                   np.array([11, 12])], 10], dtype=object)
-HS16 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                 [1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, 13, 14, 15, 16, 8, np.array([9, 10])], 10],
-                dtype=object)
-HS16p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                  [1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, np.array([14, 15]), 13, 16, 17, 8,
-                   np.array([9, 10])], 10], dtype=object)
-HS17 = np.array([[0, 1, 2, 3], [1, 2, 3, 4], 3], dtype=object)
-HS18 = np.array([[0, 1, 2, 3, 4], [1, 2, np.array([4, 5]), 6, 3], 3], dtype=object)
-HS19 = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], 5], dtype=object)
-HS19p = np.array([[0, 1, 2, 3, 4, 5], [1, 2, 3, np.array([5, 6]), 4, 7], 5], dtype=object)
-HS20 = np.array(
-    [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 2, 3, 4, 5, np.array([12, 13]), 14, 8, 9, 10, 11, np.array([6, 7])],
-     6], dtype=object)
-HS20p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                  [1, 2, 3, 4, 5, np.array([13, 14]), 15, 8, 9, np.array([11, 12]), 10, np.array([6, 7])], 6],
-                 dtype=object)
-HS21 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                 [1, 9, np.array([10, 11]), 15, 12, np.array([13, 14]), 4, 5, 7, 8, 6, np.array([2, 3])], 3],
-                dtype=object)
-HS22 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 5, 6, 7, np.array([11, 12]), 13, 8, 9, 10, 2, 3, 4], 5],
-                dtype=object)
-HS23 = np.array([[0, 1, 2, 3], [1, 2, 4, 3], 2], dtype=object)
-HS24 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 9, 6, 7, 8, 3], 3], dtype=object)
-HS24p = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 10, 6, np.array([8, 9]), 7, 3], 3], dtype=object)
-HS25 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, 3, 4, 5, np.array([6, 7]), 8, 9], 7], dtype=object)
-HS25p = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, 2, np.array([4, 5]), 3, 6, np.array([7, 8]), 9, 10], 7], dtype=object)
-HS26 = np.array([[0, 1, 2, 3], [1, 2, np.array([3, 4]), 5], 3], dtype=object)
-HS27 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                 [1, np.array([2, 3]), 4, 5, 6, 7, 11, np.array([12, 13]), 14, 8, np.array([9, 10])], 8], dtype=object)
-HS27p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                  [1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, 12, np.array([13, 14]), 15, 9, np.array([10, 11])],
-                  8], dtype=object)
-HS28 = np.array([[0, 1, 2, 3, 4, 5, 6, 7], [1, np.array([6, 7]), 8, 9, np.array([4, 5]), 10, 2, 3], 5], dtype=object)
-HS29 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                 [1, 2, np.array([16, 17]), 18, 6, 5, 7, np.array([10, 11]), np.array([12, 13]), np.array([14, 15]),
-                  np.array([8, 9]), np.array([3, 4])], 10], dtype=object)
-HS30 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                 [1, 12, 13, 14, 15, np.array([10, 11]), 6, 7, 8, 9, 16, 2, 3, 4, 5], 10], dtype=object)
-HS30p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                  [1, 13, 14, 15, 16, np.array([11, 12]), 6, 7, np.array([9, 10]), 8, 17, 2, 3, 4, 5], 10],
-                 dtype=object)
-HS32 = np.array(
-    [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [1, np.array([2, 3]), 4, 5, 6, 7, np.array([8, 9]), 10, np.array([11, 12]), 13],
-     9], dtype=object)
-HS32p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                  [1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, np.array([9, 10]), 11, np.array([12, 13]), 14], 9],
-                 dtype=object)
-HS34 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-                 [1, 11, 12, 13, 22, np.array([23, 24]), 21, np.array([25, 26]), 27, np.array([19, 20]), 15, 16, 17, 18,
-                  14, 10, 6, 7, 8, 9, np.array([4, 5]), np.array([2, 3])], 8], dtype=object)
-HS34p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-                  [1, 12, 13, 14, 24, np.array([25, 26]), 23, np.array([27, 28]), 29, np.array([21, 22]), 16, 17,
-                   np.array([19, 20]), 18, 15, 11, 6, 7, np.array([9, 10]), 8, np.array([4, 5]), np.array([2, 3])], 8],
-                 dtype=object)
-HS35 = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], [1, 2, np.array([4, 5]), 6, 7, 8, 9, 10, 12, 13, 11, 3], 9],
-                dtype=object)
-HS35p = np.array([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                  [1, 2, np.array([4, 5]), 6, 7, np.array([9, 10]), 8, 11, 13, 14, 12, 3], 9], dtype=object)
-
-
-def def_per(k, n):
-    if k + n > 9:
-        per = '%'
-    else:
-        per = ''
-    return per
-
-
-def merge_smiles(sequence, names, smiles, first='H', last='H'):
-    indices = []
-    for FRG in sequence:
-        i = np.where(names == f'{FRG}')[0][0]
-        indices.append(i)
-    if first == 'H':
-        merge = smiles[indices[0]].replace('A', '')
-    elif first == 'O':
-        merge = smiles[indices[0]].replace('A', 'O')
-    elif first == 'C':
-        merge = smiles[indices[0]].replace('A', 'C')
-    else:
-        raise ValueError("Unknown atom type of first atom.")
-    merge = merge.replace('X', '1').replace('Y', '2').replace('Z', '3')
-    k = 3
-    for i in indices[1:]:
-        working_smi = merge
-        per = def_per(k, 3)
-        smi = smiles[i].replace('Z', f'{per}{3 + k}')
-        per = def_per(k, 2)
-        smi = smi.replace('Y', f'{per}{2 + k}')
-        per = def_per(k, 1)
-        smi = smi.replace('X', f'{per}{1 + k}')
-        k += 3
-        working_smi = working_smi.replace('A', '').replace('E', f'{smi}')
-        merge = working_smi
-    if last == 'H':
-        merge = merge.replace('A', '').replace('(E)', '')
-    elif last == 'O':
-        merge = merge.replace('A', '').replace('(E)', '(O)')
-    elif last == 'C':
-        merge = merge.replace('A', '').replace('(E)', '(C)')
-    return merge
-
-
-# better counter for k with if statements
-# shorten the code
+# translation from RDKit to VSOMM2
+fragments_vsomm_indices = {
+    'HS1': np.array([1, 2, 3, np.array([4, 5]), 7, 6], dtype=object),
+    'HS2': np.array([1, np.array([6, 7]), 8, np.array([9, 10, 11]), 12, 13, np.array([4, 5]), np.array([2, 3])],
+                    dtype=object),
+    'HS3': np.array([1, 2, 3, np.array([4, 5]), 17, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], dtype=object),
+    'HS3p': np.array(
+        [1, 2, 3, np.array([4, 5]), 19, 6, 7, 8, 9, 10, np.array([12, 13]), 11, 14, 15, 16, np.array([17, 18])],
+        dtype=object),
+    'HS4': np.array([1, 2, np.array([3, 4]), 15, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dtype=object),
+    'HS4p': np.array([1, 2, np.array([3, 4]), 17, 5, 6, 7, 8, np.array([10, 11]), 9, 12, 13, np.array([15, 16]), 14],
+                     dtype=object),
+    'HS6': np.array([1, 2, np.array([3, 4]), 5, 6, 7, 8, 12, 9, np.array([10, 11])], dtype=object),
+    'HS6p': np.array([1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 13, 10, np.array([11, 12])], dtype=object),
+    'HS7': np.array([1, np.array([2, 3]), np.array([4, 5]), 13, 14, 10, np.array([11, 12]), 6, np.array([7, 8, 9])],
+                    dtype=object),
+    'HS8': np.array([1, np.array([2, 3]), np.array([4, 5]), 11, 12, 8, np.array([9, 10]), np.array([6, 7])],
+                    dtype=object),
+    'HS9': np.array([1, 2, np.array([3, 4]), 5, 6, 7, 8, 11, np.array([9, 10])], dtype=object),
+    'HS9p': np.array([1, 2, np.array([3, 4]), 5, 6, 7, np.array([8, 9]), 12, np.array([10, 11])], dtype=object),
+    'HS11': np.array([1, 2, 3, 5, 4], dtype=object),
+    'HS12': np.array([1, 2, 5, np.array([6, 7, 8]), 21, 20, 9, np.array([10, 11]), 12, 16,
+                      np.array([17, 18]), 19, 13, 14, 15, 22, np.array([3, 4])], dtype=object),
+    'HS12p': np.array([1, 2, 5, np.array([6, 7, 8]), 22, 21, 9, np.array([10, 11]), 12, 17,
+                       np.array([18, 19]), 20, 13, np.array([15, 16]), 14, 23, np.array([3, 4])], dtype=object),
+    'HS13': np.array([1, 2, 15, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, 13, 14, np.array([10, 11])],
+                     dtype=object),
+    'HS13p': np.array(
+        [1, 2, 16, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, np.array([14, 15]), 13, np.array([10, 11])],
+        dtype=object),
+    'HS14': np.array([1, 2, np.array([3, 4]), 5, 6, 7, 8, 13, np.array([14, 15]), 12, 17, 16, 9, np.array([10, 11])],
+                     dtype=object),
+    'HS14p': np.array([1, 2, np.array([3, 4]), 5, 6, np.array([8, 9]), 7, 14, np.array([15, 16]), 13, 18, 17, 10,
+                       np.array([11, 12])], dtype=object),
+    'HS16': np.array([1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, 13, 14, 15, 16, 8, np.array([9, 10])],
+                     dtype=object),
+    'HS16p': np.array([1, 2, np.array([3, 4]), 5, np.array([6, 7]), 11, 12, np.array([14, 15]), 13, 16, 17, 8,
+                       np.array([9, 10])], dtype=object),
+    'HS17': np.array([1, 2, 3, 4], dtype=object),
+    'HS18': np.array([1, 2, np.array([4, 5]), 6, 3], dtype=object),
+    'HS19': np.array([1, 2, 3, 4, 5, 6], dtype=object),
+    'HS19p': np.array([1, 2, 3, np.array([5, 6]), 4, 7], dtype=object),
+    'HS20': np.array(
+        [1, 2, 3, 4, 5, np.array([12, 13]), 14, 8, 9, 10, 11, np.array([6, 7])], dtype=object),
+    'HS20p': np.array([1, 2, 3, 4, 5, np.array([13, 14]), 15, 8, 9, np.array([11, 12]), 10, np.array([6, 7])],
+                      dtype=object),
+    'HS21': np.array([1, 9, np.array([10, 11]), 15, 12, np.array([13, 14]), 4, 5, 7, 8, 6, np.array([2, 3])],
+                     dtype=object),
+    'HS22': np.array([1, 5, 6, 7, np.array([11, 12]), 13, 8, 9, 10, 2, 3, 4],
+                     dtype=object),
+    'HS23': np.array([1, 2, 4, 3], dtype=object),
+    'HS24': np.array([1, 2, np.array([4, 5]), 9, 6, 7, 8, 3], dtype=object),
+    'HS24p': np.array([1, 2, np.array([4, 5]), 10, 6, np.array([8, 9]), 7, 3], dtype=object),
+    'HS25': np.array([1, 2, 3, 4, 5, np.array([6, 7]), 8, 9], dtype=object),
+    'HS25p': np.array([1, 2, np.array([4, 5]), 3, 6, np.array([7, 8]), 9, 10], dtype=object),
+    'HS26': np.array([1, 2, np.array([3, 4]), 5], dtype=object),
+    'HS27': np.array([1, np.array([2, 3]), 4, 5, 6, 7, 11, np.array([12, 13]), 14, 8, np.array([9, 10])], dtype=object),
+    'HS27p': np.array(
+        [1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, 12, np.array([13, 14]), 15, 9, np.array([10, 11])],
+        dtype=object),
+    'HS28': np.array([1, np.array([6, 7]), 8, 9, np.array([4, 5]), 10, 2, 3], dtype=object),
+    'HS29': np.array([1, 2, np.array([16, 17]), 18, 6, 5, 7, np.array([10, 11]), np.array([12, 13]), np.array([14, 15]),
+                      np.array([8, 9]), np.array([3, 4])], dtype=object),
+    'HS30': np.array([1, 12, 13, 14, 15, np.array([10, 11]), 6, 7, 8, 9, 16, 2, 3, 4, 5], dtype=object),
+    'HS30p': np.array([1, 13, 14, 15, 16, np.array([11, 12]), 6, 7, np.array([9, 10]), 8, 17, 2, 3, 4, 5],
+                      dtype=object),
+    'HS32': np.array([1, np.array([2, 3]), 4, 5, 6, 7, np.array([8, 9]), 10, np.array([11, 12]), 13], dtype=object),
+    'HS32p': np.array([1, np.array([2, 3]), 4, 5, np.array([7, 8]), 6, np.array([9, 10]), 11, np.array([12, 13]), 14],
+                      dtype=object),
+    'HS34': np.array(
+        [1, 11, 12, 13, 22, np.array([23, 24]), 21, np.array([25, 26]), 27, np.array([19, 20]), 15, 16, 17, 18,
+         14, 10, 6, 7, 8, 9, np.array([4, 5]), np.array([2, 3])], dtype=object),
+    'HS34p': np.array([1, 12, 13, 14, 24, np.array([25, 26]), 23, np.array([27, 28]), 29, np.array([21, 22]), 16, 17,
+                       np.array([19, 20]), 18, 15, 11, 6, 7, np.array([9, 10]), 8, np.array([4, 5]), np.array([2, 3])],
+                      dtype=object),
+    'HS35': np.array([1, 2, np.array([4, 5]), 6, 7, 8, 9, 10, 12, 13, 11, 3], dtype=object),
+    'HS35p': np.array([1, 2, np.array([4, 5]), 6, 7, np.array([9, 10]), 8, 11, 13, 14, 12, 3], dtype=object)
+}
 
 
 # read itp files
@@ -643,85 +558,88 @@ def read_itps(PATH, GRO):
     return first_atoms, first_add, last_atoms, last_add, sequence, itp_list
 
 
-def create_smiles(sequence, names, smiles, first_atoms, last_atoms):
-    merged_smiles = []
-    for i in range(len(sequence)):
-        merged = merge_smiles(sequence[i], names, smiles, first_atoms[i], last_atoms[i])
-        merged_smiles.append(merged)
-    return merged_smiles
+def create_macromolecule(sequence, first_atom='H', last_atom='H'):
+    macro_mol = Chem.MolFromSmiles('')
 
+    # combine fragments
+    for FRG in sequence:
+        n_before = macro_mol.GetNumHeavyAtoms()
+        if n_before != 0:
+            n_fragment_before = fragment_mol.GetNumHeavyAtoms()
+        fragment_mol = Chem.MolFromSmiles(smiles[FRG])
+        macro_mol = Chem.EditableMol(Chem.CombineMols(macro_mol, fragment_mol))
+        if n_before != 0:
+            macro_mol.AddBond(index_last + n_before - n_fragment_before, n_before, order=Chem.rdchem.BondType.SINGLE)
+        macro_mol = macro_mol.GetMol()
+        index_last = get_last(FRG)
 
-# create translated list for VSOMM2
-def translate_atoms(FRAGMENTS, first=1, last=1, first_atom='H', last_atom='H'):  # adding atoms at first or last place
-    RDKIT = 0
-    VSOMM2 = 1
-    before = 2
-
-    MODs = []
-    MOD2s = []
-    vsomm_list = []
-    count = [0]
-    count2 = 0
-    for ksi in range(len(FRAGMENTS)):
-        FRG = FRAGMENTS[ksi]
-        # add first and last atoms
-        MOD = np.array(FRG[VSOMM2].copy(), dtype=object)
-        MOD2 = np.array(FRG[RDKIT].copy(), dtype=object)
-        if ksi == 0 and first == 1:  # first fragment
-            MOD = np.array(MOD, dtype=object)
-            MOD = np.add(MOD, 1, dtype=object)  # shift all indices by 1
-            if first_atom == 'H':
-                MOD[0] = np.array([1, MOD[0]])  # add hydrogen
-            else:
-                MOD = np.insert(MOD, 0, 1)  # add heavy atom
-                MOD2 = np.append(MOD2, len(MOD2))  # it is like shifting all and inserting 0 at the beginning
-        elif ksi == len(FRAGMENTS) - 1 and last == 1:  # last fragment
-            if last_atom == 'H':
-                MOD[FRG[before]] = np.array([MOD[FRG[before]], np.add(MOD[FRG[before]], 1)])  # add hydrogen
-            else:
-                if len(MOD) == FRG[before]:  # atom before branch is last atom, just append
-                    MOD = np.append(MOD, np.add(MOD[FRG[before]], 1))
-                    MOD2 = np.append(MOD2, len(MOD2))
-                else:
-                    MOD = np.insert(MOD, FRG[before] + 1, np.add(MOD[FRG[before]], 1))
-                    MOD2 = np.append(MOD2, len(MOD2))
-        # count hidden atoms
-        for j in MOD:
-            if type(j) is list or type(j) is np.ndarray:
-                count2 += len(j) - 1  # hidden atoms
-        for i in MOD2:
-            # count hidden atoms within a fragment
-            vsomm_list.append(np.add(MOD[i], count[ksi]))
-            if i == FRG[before] and ksi != len(FRAGMENTS) - 1:  # not last fragment:
-                count_h = 0
-                m = ksi
-                while m >= 0:
-                    count_h += len(FRAGMENTS[m][VSOMM2])
-                    m -= 1
-                count_h += count2
-                count.append(count_h)
-                MODs.append(MOD)
-                MOD2s.append(MOD2)
-                break
-
-    MODs = np.array(MODs, dtype=object)
-    MOD2s = np.array(MOD2s, dtype=object)
-    for ksi in range(len(FRAGMENTS) - 1):  # leave out last fragment, treated already above
-        FRG = np.flip(FRAGMENTS, axis=0)[ksi + 1]
-        for i in np.flip(MOD2s, axis=0)[ksi]:
-            if i > FRG[before]:
-                vsomm_list.append(np.add(np.flip(MODs, axis=0)[ksi][i], np.flip(count)[ksi + 1]))
-
-    length = 0
-    for FRG in FRAGMENTS:
-        length += len(FRG[RDKIT])
+    # add first heavy atom
     if first_atom != 'H':
-        length += 1
+        first_atom_mol = Chem.MolFromSmiles(first_atom)
+        macro_mol = Chem.EditableMol(Chem.CombineMols(macro_mol, first_atom_mol))
+        macro_mol.AddBond(0, macro_mol.GetMol().GetNumHeavyAtoms() - 1, order=Chem.rdchem.BondType.SINGLE)
+        macro_mol = macro_mol.GetMol()
+    # add last heavy atom
     if last_atom != 'H':
-        length += 1
-    rdkit_list = [*range(length)]
+        last_atom_mol = Chem.MolFromSmiles(last_atom)
+        macro_mol = Chem.EditableMol(Chem.CombineMols(macro_mol, last_atom_mol))
+        macro_mol.AddBond(get_last(FRG) + n_before, macro_mol.GetMol().GetNumHeavyAtoms() - 1,
+                          order=Chem.rdchem.BondType.SINGLE)
+        macro_mol = macro_mol.GetMol()
 
-    return rdkit_list, vsomm_list
+    # remove additional hydrogens, which weren't removed by 'Chem.CombineMols'
+    return Chem.RemoveHs(macro_mol)
+
+
+def get_last(FRG):
+    def find_max_in_array(array):
+        if isinstance(array, np.ndarray):
+            return np.max(array)
+        else:
+            return array
+
+    # get index of last heavy atom before a brach
+    index = np.argmax([find_max_in_array(element) for element in fragments_vsomm_indices[FRG]])
+    return int(index)
+
+
+def create_vsomm_list(sequence, first_add=1, last_add=1, first_atom='H', last_atom='H'):
+    vsomm_list = np.array([], dtype=object)
+    n_before = 0
+    for FRG in sequence:
+        FRG_vsomm_indices = np.copy(fragments_vsomm_indices[FRG])
+        vsomm_list = np.concatenate((vsomm_list, np.add(FRG_vsomm_indices, n_before)))
+        n_before += get_largest_index(fragments_vsomm_indices[FRG])
+    # add first and last atoms
+    if first_add > 0:
+        if first_atom == 'H':
+            vsomm_list = np.add(vsomm_list, 1, dtype=object)
+            vsomm_list[0] = np.array([1, vsomm_list[0]])
+        elif first_atom == 'C':
+            vsomm_list = np.add(vsomm_list, 1, dtype=object)
+            vsomm_list = np.append(vsomm_list, 1)
+        elif first_atom == 'O':
+            vsomm_list = np.add(vsomm_list, 2, dtype=object)
+            vsomm_list = np.append(vsomm_list, 1)
+            vsomm_list[-1] = np.array([1, 2])
+    if last_add > 0:
+        if last_atom == 'H':
+            # get index of last atom
+            index_last_atom = 0
+            for i, FRG in enumerate(sequence):
+                if i < len(sequence) - 1:
+                    index_last_atom += len(fragments_vsomm_indices[FRG])
+                else:
+                    index_last_atom += get_last(FRG)
+            if vsomm_list[index_last_atom] != get_largest_index(vsomm_list):
+                print("Something went wrong.")
+            vsomm_list[index_last_atom] = np.array([vsomm_list[index_last_atom], vsomm_list[index_last_atom] + 1])
+        elif last_atom == 'C':
+            vsomm_list = np.append(vsomm_list, get_largest_index(vsomm_list) + 1)
+        elif last_atom == 'O':
+            vsomm_list = np.append(vsomm_list, get_largest_index(vsomm_list) + 1)
+            vsomm_list[-1] = np.array([get_largest_index(vsomm_list) + 1, get_largest_index(vsomm_list) + 2])
+    return vsomm_list
 
 
 def translate_mapping(mapping, vsomm_list):
@@ -985,12 +903,12 @@ def get_coords(mol, beads, map):
         for atom in bead:
             if map == 'com':
                 mass = mol.GetAtomWithIdx(atom).GetMass()
-                coord += conf.GetAtomPosition(atom)*mass
+                coord += conf.GetAtomPosition(atom) * mass
                 total += mass
             else:
                 coord += conf.GetAtomPosition(atom)
         if map == 'com':
-            coord /= (total*10.0)
+            coord /= (total * 10.0)
         else:
             coord /= (len(bead) * 10.0)
         cg_coords.append(coord)
@@ -1014,8 +932,8 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         for b in range(len(bead_types)):
             itp.write(
                 '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
-                                                                               'CG' + str(b + 1), b + 1, charges[b],
-                                                                               masses[b]))
+                                                                            'CG' + str(b + 1), b + 1, charges[b],
+                                                                            masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
         angles = write_angles(itp, bonds, constraints, beads, mol, n_confs)
         if dihedrals:
@@ -1321,35 +1239,26 @@ def main():
 
     check_arguments(PATH, CG_PATH)
 
-    first_atoms, first_add, last_atoms, last_add, sequence, itp_list = read_itps(PATH, GRO)
-    merged_smiles = create_smiles(sequence, names, smiles, first_atoms, last_atoms)
+    first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(PATH, GRO)
 
     vsomm_lists = []
-    rdkit_lists = []
-    for i, mol in enumerate(sequence):
-        FRAGMENTS = []
-        for fragment in mol:
-            FRAGMENTS.append(globals()[fragment])  # convert strings to lists
-        rdkit_list, vsomm_list = translate_atoms(FRAGMENTS, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
+    for i, sequence in enumerate(sequences):
+        vsomm_list = create_vsomm_list(sequence, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
         vsomm_lists.append(vsomm_list)
-        rdkit_lists.append(rdkit_list)
 
     mapping = []
     resnames = []
-    print(f' - Generating output files for {len(merged_smiles)} HS molecules.')
-    for i in tqdm(range(len(merged_smiles))):
-        smi = merged_smiles[i]
-        mol = Chem.MolFromSmiles(smi)
-        print(f"{itp_list[i]}")
-        print(f"{vsomm_lists[i]}")
+    print(f' - Generating output files for {len(sequences)} HS molecules.')
+    for i in tqdm(range(len(sequences))):
+        mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
         ring_atoms = get_ring_atoms(mol)
-        A_cg = create_A_matrix(sequence[i], fragments_connections, fragments_lengths, FRG_same)
-        beads = back_translation(create_mapping_vsomm(sequence[i], fragments_mapping, first_add[i], last_add[i]),
+        A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
+        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
                                  vsomm_lists[i])
         ring_beads = determine_ring_beads(ring_atoms, beads)
 
-        charges = determine_charges(sequence[i], fragments_charges)
-        bead_types = determine_bead_types(sequence[i], fragments_bead_types)
+        charges = determine_charges(sequences[i], fragments_charges)
+        bead_types = determine_bead_types(sequences[i], fragments_bead_types)
 
         mol = Chem.AddHs(mol)
         n_confs = args.n_confs
@@ -1357,9 +1266,9 @@ def main():
         Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
         coords0 = get_coords(mol, beads, map)  # coordinates of energy minimized molecules
 
-        virtual, real = get_new_virtual_sites(sequence[i], fragments_vs, fragments_lengths, ring_beads)
+        virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
-        resname_list = create_resname_list(sequence[i], fragments_lengths)
+        resname_list = create_resname_list(sequences[i], fragments_lengths)
         write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
                   resname_list, f'{CG_PATH}/{itp_list[i]}')
         mapping.append(beads)
@@ -1377,8 +1286,7 @@ def main():
             bonds = u1.bonds.indices
             n += len(u1.atoms)
         else:
-            for b in u1.bonds.indices:
-                bonds = np.concatenate((bonds, np.add(u1.bonds.indices, n)))
+            bonds = np.concatenate((bonds, np.add(u1.bonds.indices, n)))
             n += len(u1.atoms)
     u.add_TopologyAttr('bonds', bonds)
     # unwrap
@@ -1396,7 +1304,7 @@ def main():
     prev_atoms = 0
     resids = []
     names_gro = []
-    for i, mol in enumerate(sequence):
+    for i, mol in enumerate(sequences):
         for j, bead in enumerate(mapping[i]):
             vsomm_indices = translate_mapping(bead, vsomm_lists[i])
             a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
@@ -1423,7 +1331,7 @@ def main():
             print("Error: Resname {ions.resnames[0]} of ions is unknown.")
             abort_script()
         for i in range(len(ions.atoms)):
-            resids.append(len(sequence) + i + 1)
+            resids.append(len(sequences) + i + 1)
             resnames.append(resname)
             names_gro.append(resname)
         # merge with calcium ions
