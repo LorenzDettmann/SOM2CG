@@ -33,9 +33,9 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [ ] Option to output only the coarse-grained structure file
 - [ ] More accurate beads for first and last groups in molecules
 ### Optional
+- [X] Rewrite "translate_atoms" function
+- [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
 - [ ] Rewrite and optimize functions from cg_param_m3.py
-- [ ] Rewrite "translate_atoms" function
-- [ ] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggstions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
