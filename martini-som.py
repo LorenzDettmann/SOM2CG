@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.0_alt"
+__version__ = "0.4.2_alt"
 __status__ = "Development"
 
 import os
@@ -1235,7 +1235,10 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
         for j, bead in enumerate(mapping[i]):
             vsomm_indices = translate_mapping(bead, vsomm_lists[i])
             a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
-            coords.append(a.center_of_geometry())
+            if map == 'com':
+                coords.append(a.center_of_mass())
+            else:
+                coords.append(a.center_of_geometry())
             resids.append(i + 1)
             names_gro.append(f"CG{j + 1}")
         prev_atoms += get_largest_index(vsomm_lists[i])
