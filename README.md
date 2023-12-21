@@ -30,11 +30,13 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Add more information to the visual output
 - [X] Add functionality for switching between COM and COG mapping
 - [X] Option to output only the coarse-grained structure file
+- [ ] Generate topol.top file
 - [ ] More accurate beads for first and last groups in molecules
 ### Optional
 - [X] Rewrite "translate_atoms" function
 - [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
 - [ ] Rewrite and optimize functions from cg_param_m3.py
+- [ ] Modify VS parameters for first and last fragment of a molecule
 - [ ] Parallelization support
 
 ## Contributing
