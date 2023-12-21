@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.2_alt"
+__version__ = "0.4.3_alt"
 __status__ = "Development"
 
 import os
@@ -904,7 +904,7 @@ def get_coords(mol, beads):
 
 
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, itp_name, name):
+              masses, resname_list, itp_name, name, i):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -916,7 +916,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write('\n[atoms]\n')
         for b in range(len(bead_types)):
             itp.write(
-                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1, resname_list[b],
+                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i, resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
@@ -1202,7 +1202,43 @@ def positive_integer(value):
 
 def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames):
     print(f"- Generating initial structure file from '{GRO}'.")
-    # add bonds for unwrapping
+    # unwrap
+    u = unwrapped_atomistic_structure(PATH, GRO, itp_list)
+
+    # create mapped structure
+    mapped = mapped_structure(u, itp_list, mapping, sequences, vsomm_lists)
+
+    # add info
+    add_residue_info(u, mapped, sequences, mapping, resnames)
+
+    # save structure file
+    mapped.atoms.write(f'{CG_PATH}/mapped.gro')
+
+    # generate gro file for solvation, if not already present
+    water_gro = """Regular sized water particle    
+1    
+    1W      W      1   0.000   0.000   0.000    
+   1.00000   1.00000   1.00000  
+    """
+    file = "water.gro"
+    if not os.path.exists(f"{CG_PATH}/{file}"):
+        f = open(f"{CG_PATH}/{file}", "w")
+        f.write(water_gro)
+        f.close()
+
+    # number of coarse-grained water molecules
+    N = round(len(u.select_atoms('name OW')) / 4)
+
+    print('- Done')
+    if N > 0:
+        print(
+            f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
+            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+
+def unwrapped_atomistic_structure(PATH, GRO, itp_list):
+    # unwraps the atomistic structure to correctly generate the mapped structure
+    # to unwrap, the atomistic bonds have to be read and added
     # load atomistic coordinates
     u = mda.Universe(f'{GRO}')
     # add bonds from itp files
@@ -1220,17 +1256,19 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
     workflow = [transformations.unwrap(u.atoms)]
     u.trajectory.add_transformations(*workflow)
 
-    # get total number of beads
-    n_beads = 0
+    return u
+
+
+def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists):
+    # create the mapped structure (without ions) based on the unwrapped atomistic structure
+    # wrapping at the end
+    n_beads = 0  # get total number of beads
     for i, file in enumerate(itp_list):
         n_beads += len(mapping[i])
     n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
                            residue_segindex=np.zeros(n_beads))
-
     coords = []
     prev_atoms = 0
-    resids = []
-    names_gro = []
     for i, mol in enumerate(sequences):
         for j, bead in enumerate(mapping[i]):
             vsomm_indices = translate_mapping(bead, vsomm_lists[i])
@@ -1239,18 +1277,37 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
                 coords.append(a.center_of_mass())
             else:
                 coords.append(a.center_of_geometry())
-            resids.append(i + 1)
-            names_gro.append(f"CG{j + 1}")
+
         prev_atoms += get_largest_index(vsomm_lists[i])
     n.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
-
     # set box size to that of the atomistic frame
     n.dimensions = u.dimensions
     # wrap molecules
     workflow = [transformations.wrap(n.atoms)]
     n.trajectory.add_transformations(*workflow)
 
-    # save mapped coordinates with calcium ions
+    # add ions
+    ions = u.select_atoms("resname CA2+ or resname NA+")
+    if len(ions) > 0:
+        # merge with calcium ions
+        merged = mda.Merge(n.select_atoms("all"), ions)
+    else:
+        merged = n
+    # add dimensions
+    merged.dimensions = u.dimensions
+
+    return merged
+
+
+def add_residue_info(u, mapped, sequences, mapping, resnames):
+    # add resids, resnames and names
+    resids = []
+    names_gro = []
+    for i, mol in enumerate(sequences):
+        for j, bead in enumerate(mapping[i]):
+            resids.append(i + 1)
+            names_gro.append(f"CG{j + 1}")
+
     ions = u.select_atoms("resname CA2+ or resname NA+")
     if len(ions) > 0:
         if ions.resnames[0] == "CA2+":
@@ -1264,42 +1321,14 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
             resids.append(len(sequences) + i + 1)
             resnames.append(resname)
             names_gro.append(resname)
-        # merge with calcium ions
-        merged = mda.Merge(n.select_atoms("all"), ions)
-    else:
-        merged = n
-    # add dimensions
-    merged.dimensions = u.dimensions
-    # add resnames, etc.
+
+    # add resnames, etc. and save trajectory
     resnames_flat = ([item for sublist in resnames if isinstance(sublist, list) for item in sublist]
                      + [item for item in resnames if not isinstance(item, list)])
 
-    merged.add_TopologyAttr('resid', resids)
-    merged.add_TopologyAttr('resname', resnames_flat)
-    merged.add_TopologyAttr('name', names_gro)
-    merged.atoms.write(f'{CG_PATH}/mapped.gro')
-
-    # create 'water.pdb' if not already present
-    water_pdb = """TITLE     Gromacs Runs On Most of All Computer Systems    
-REMARK    THIS IS A SIMULATION BOX    
-CRYST1   10.000   10.000   10.000  90.00  90.00  90.00 P 1           1    
-MODEL        1    
-ATOM      1  W     W     1       0.000   0.000   0.000  1.00  0.00                
-TER    
-ENDMDL"""
-    file = "water.pdb"
-    if not os.path.exists(f"{CG_PATH}/{file}"):
-        f = open(f"{CG_PATH}/{file}", "w")
-        f.write(water_pdb)
-        f.close()
-    # number of coarse-grained water molecules
-    N = round(len(u.select_atoms('name OW')) / 4)
-
-    print('- Done')
-    if N > 0:
-        print(
-            f"You can solvate the structure with \'gmx insert-molecules -ci water.pdb -nmol {round(N)}"
-            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+    mapped.add_TopologyAttr('resid', resids)
+    mapped.add_TopologyAttr('resname', resnames_flat)
+    mapped.add_TopologyAttr('name', names_gro)
 
 
 def main():
@@ -1371,7 +1400,7 @@ def main():
             masses = get_standard_masses(bead_types, virtual)
 
             write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                      resname_list, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4])
+                      resname_list, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
 
     generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames)
 
