@@ -30,7 +30,7 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 - [X] Add more information to the visual output
 - [X] Add functionality for switching between COM and COG mapping
 - [X] Option to output only the coarse-grained structure file
-- [ ] Generate topol.top file
+- [X] Generate topol.top file
 - [ ] More accurate beads for first and last groups in molecules
 ### Optional
 - [X] Rewrite "translate_atoms" function
