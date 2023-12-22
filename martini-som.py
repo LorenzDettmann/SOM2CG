@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.3_alt"
+__version__ = "0.4.4_alt"
 __status__ = "Development"
 
 import os
@@ -1181,9 +1181,11 @@ def check_arguments(PATH, CG_PATH):
     output_prefix = 'HS_'
     output_suffix = '.itp'
     cg_coordinate_file = 'mapped.gro'
+    topology_file = 'topol.top'
 
     output_files = [file for file in os.listdir(CG_PATH)
-                    if (file.startswith(output_prefix) and file.endswith(output_suffix)) or file == cg_coordinate_file]
+                    if (file.startswith(output_prefix) and file.endswith(output_suffix)) or file == cg_coordinate_file
+                    or file == topology_file]
 
     if output_files:
         print(f"Warning: The given output directory 'CG_PATH' does already contain topology files.")
@@ -1214,26 +1216,11 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
     # save structure file
     mapped.atoms.write(f'{CG_PATH}/mapped.gro')
 
-    # generate gro file for solvation, if not already present
-    water_gro = """Regular sized water particle    
-1    
-    1W      W      1   0.000   0.000   0.000    
-   1.00000   1.00000   1.00000  
-    """
-    file = "water.gro"
-    if not os.path.exists(f"{CG_PATH}/{file}"):
-        f = open(f"{CG_PATH}/{file}", "w")
-        f.write(water_gro)
-        f.close()
+    # write water structure file
+    write_water_file(CG_PATH, u)
 
-    # number of coarse-grained water molecules
-    N = round(len(u.select_atoms('name OW')) / 4)
-
-    print('- Done')
-    if N > 0:
-        print(
-            f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
-            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+    # write topology file
+    write_top_file(CG_PATH, u, itp_list)
 
 
 def unwrapped_atomistic_structure(PATH, GRO, itp_list):
@@ -1329,6 +1316,65 @@ def add_residue_info(u, mapped, sequences, mapping, resnames):
     mapped.add_TopologyAttr('resid', resids)
     mapped.add_TopologyAttr('resname', resnames_flat)
     mapped.add_TopologyAttr('name', names_gro)
+
+
+def write_water_file(CG_PATH, u):
+    # generate gro file for solvation, if not already present
+    water_gro = """Regular sized water particle
+1
+    1W      W      1   0.000   0.000   0.000
+   1.00000   1.00000   1.00000"""
+    file = "water.gro"
+    if not os.path.exists(f"{CG_PATH}/{file}"):
+        f = open(f"{CG_PATH}/{file}", "w")
+        f.write(water_gro)
+        f.close()
+
+    # number of coarse-grained water molecules
+    N = round(len(u.select_atoms('name OW')) / 4)
+
+    print('- Done')
+    if N > 0:
+        print(
+            f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
+            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+
+def write_top_file(CG_PATH, u, itp_list):
+    topol_top = """#include "martini3.ff/martini_v3.0.0.itp"      
+#include "martini3.ff/martini_v3.0.0_solvents_v1.itp"    
+#include "martini3.ff/martini_v3.0.0_ions_v1.itp"\n
+"""
+    file = "topol.top"
+    f = open(f"{CG_PATH}/{file}", "w")
+    f.write(topol_top)
+    for itp_file in itp_list:
+        f.write(f'#include "{itp_file}"\n')
+    f.write("""
+[ system ]    
+HS in water\n
+[ molecules ]\n""")
+    for itp_file in itp_list:
+        f.write(f'{itp_file[:-4]}\t\t1\n')
+
+    ions = u.select_atoms("resname CA2+ or resname NA+")
+    N_ions = len(ions)
+    N = round(len(u.select_atoms('name OW')) / 4)
+
+    if N_ions > 0:
+        if ions.resnames[0] == "CA2+":
+            resname = "CA"
+        elif ions.resnames[0] == "NA+":
+            resname = "NA"
+        else:
+            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            abort_script()
+        f.write(f'{resname}\t\t{N_ions}\n')
+
+    if N > 0:
+        f.write(f'W\t\t{N}')
+
+    f.close()
 
 
 def main():
