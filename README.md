@@ -31,13 +31,14 @@ python3 martini-som.py [-V] [-h] [-nt 'number of threads'] [-input_dir 'input di
 - [X] Add functionality for switching between COM and COG mapping
 - [X] Option to output only the coarse-grained structure file
 - [X] Generate topol.top file
-- [ ] More accurate beads for first and last groups in molecules
+- [X] More accurate beads for first and last groups for selected fragments
 ### Optional
 - [X] Rewrite "translate_atoms" function
 - [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
 - [X] Parallelization support
 - [ ] Rewrite and optimize functions from cg_param_m3.py
 - [ ] More accurate VS parameters for first and last fragment of a molecule, and for COM mapping
+- [ ] More accurate bead assignment for first and last atom groups for all fragments (perhaps new mapping needed)
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggestions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
