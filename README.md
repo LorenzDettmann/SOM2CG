@@ -35,12 +35,12 @@ python3 martini-som.py [-V] [-h] [-input_dir 'input directory'] [-output_dir 'ou
 ### Optional
 - [X] Rewrite "translate_atoms" function
 - [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
+- [X] Parallelization support
 - [ ] Rewrite and optimize functions from cg_param_m3.py
-- [ ] Modify VS parameters for first and last fragment of a molecule
-- [ ] Parallelization support
+- [ ] More accurate VS parameters for first and last fragment of a molecule, and for COM mapping
 
 ## Contributing
-If you have any suggestions for improving the efficiency of the script, or suggstions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
+If you have any suggestions for improving the efficiency of the script, or suggestions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
 
 ## License
 The licence has to be clarified ...
