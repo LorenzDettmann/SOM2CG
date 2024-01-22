@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __status__ = "Development"
 
 import os
@@ -386,81 +386,81 @@ fragments_vs = {
 }
 
 fragments_modify_first = {
-    'HS22' : {
-        'pos' : 0,
-        'H' : 'TC5'
+    'HS22': {
+        'pos': 0,
+        'H': 'TC5'
     },
-    'HS30' : {
-        'pos' : 0,
-        'H' : 'TC5'
+    'HS30': {
+        'pos': 0,
+        'H': 'TC5'
     },
-    'HS30p' : {
-        'pos' : 0,
-        'H' : 'TC5'
+    'HS30p': {
+        'pos': 0,
+        'H': 'TC5'
     },
-    'HS30fp' : {
-        'pos' : 0,
-        'H' : 'TC5'
+    'HS30fp': {
+        'pos': 0,
+        'H': 'TC5'
     }
 }
 
 fragments_modify_last = {
-    'HS2' : {
-        'pos' : -2,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS2': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS7' : {
-        'pos' : -2,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS7': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS8' : {
-        'pos' : -2,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS8': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS12' : {
-        'pos' : -3,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS12': {
+        'pos': -3,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS12p' : {
-        'pos' : -3,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS12p': {
+        'pos': -3,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS16' : {
-        'pos' : -2,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS16': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS16p' : {
-        'pos' : -2,
-        'H' : 'TN6',
-        'C' : 'SN2a'
+    'HS16p': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
     },
-    'HS25' : {
-        'pos' : -1,
-        'H' : 'TP1',
-        'C' : 'SN3r'
+    'HS25': {
+        'pos': -1,
+        'H': 'TP1',
+        'C': 'SN3r'
     },
-    'HS25p' : {
-        'pos' : -1,
-        'H' : 'TP1',
-        'C' : 'SN3r'
+    'HS25p': {
+        'pos': -1,
+        'H': 'TP1',
+        'C': 'SN3r'
     },
-    'HS30' : {
-        'pos' : -1,
-        'H' : 'TC5'
+    'HS30': {
+        'pos': -1,
+        'H': 'TC5'
     },
-    'HS30p' : {
-        'pos' : -1,
-        'H' : 'TC5'
+    'HS30p': {
+        'pos': -1,
+        'H': 'TC5'
     },
-    'HS30fp' : {
-        'pos' : -1,
-        'H' : 'TC5'
+    'HS30fp': {
+        'pos': -1,
+        'H': 'TC5'
     }
 }
 
@@ -600,11 +600,14 @@ def read_itps(PATH, GRO):
             else:
                 first_atoms.append('C')
                 first_add.append(1)
+        elif u1.atoms[0].type == 'CH2':
+            first_atoms.append('H')
+            first_add.append(0)
         elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
             first_atoms.append('O')
             first_add.append(2)
         else:
-            print(f'No rule for atom type {u1.atoms[0].type}.')
+            print(f'{file}: No rule for first atom type {u1.atoms[0].type}.')
             first_atoms.append('H')
             first_add.append(0)
         if u1.atoms[-1].type == 'HC':
@@ -618,6 +621,9 @@ def read_itps(PATH, GRO):
             else:
                 last_atoms.append('C')
                 last_add.append(1)
+        elif u1.atoms[-1].type == 'CH2':
+            last_atoms.append('H')
+            last_add.append(0)
         elif u1.atoms[-1].type == 'H':
             if u.atoms[n - 1].resname in FRG_O:
                 last_atoms.append('H')
@@ -626,7 +632,7 @@ def read_itps(PATH, GRO):
                 last_atoms.append('O')
                 last_add.append(2)
         else:
-            print(f'No rule for atom type {u1.atoms[0].type}.')
+            print(f'{file}: No rule for last atom type {u1.atoms[0].type}.')
             last_atoms.append('H')
             last_add.append(0)
 
@@ -860,6 +866,24 @@ def create_A_matrix(sequence, fragments_connections, fragments_lengths, FRG_same
     return matrix_from_list(bonds, total_no_of_beads)
 
 
+def change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom):
+    # modify first bead in macromolecule, if fragment-atom pair is in the list
+    if resname_list[0] in fragments_modify_first.keys():
+        if first_atom in fragments_modify_first[resname_list[0]].keys():
+            bead_types[fragments_modify_first[resname_list[0]]['pos']] = fragments_modify_first[resname_list[0]][
+                first_atom]
+        else:
+            pass
+
+    # same for last bead
+    if resname_list[-1] in fragments_modify_last.keys():
+        if last_atom in fragments_modify_last[resname_list[-1]].keys():
+            bead_types[fragments_modify_last[resname_list[-1]]['pos']] = fragments_modify_last[resname_list[-1]][
+                last_atom]
+        else:
+            pass
+
+
 def determine_bead_types(sequence, fragments_bead_types):
     bead_types = []
     for FRG in sequence:
@@ -928,7 +952,8 @@ def get_standard_masses(bead_types, virtual):
         else:
             masses.append(72)
 
-    for vsite, refs in virtual.items():
+    # sort virtual sites to keep order of hierarchy
+    for vsite, refs in sorted(virtual.items(), key=lambda x: len(x[1]), reverse=True):
         vmass = masses[vsite]
         masses[vsite] = 0
         weight = len(refs.items())
@@ -983,24 +1008,8 @@ def get_coords(mol, beads, map_type):
     return np.array(cg_coords)
 
 
-def change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom):
-    # modify first bead in macromolecule, if fragment-atom pair is in the list
-    if resname_list[0] in fragments_modify_first.keys():
-        if first_atom in fragments_modify_first[resname_list[0]].keys():
-            bead_types[fragments_modify_first[resname_list[0]]['pos']] = fragments_modify_first[resname_list[0]][first_atom]
-        else:
-            pass
-
-    # same for last bead
-    if resname_list[-1] in fragments_modify_last.keys():
-        if last_atom in fragments_modify_last[resname_list[-1]].keys():
-            bead_types[fragments_modify_last[resname_list[-1]]['pos']] = fragments_modify_last[resname_list[-1]][last_atom]
-        else:
-            pass
-
-
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, map_type, itp_name, name, i, first_atom, last_atom):
+              masses, resname_list, map_type, itp_name, name, i):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1010,7 +1019,6 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write(f'{name}    1\n')
         # write atoms section
         itp.write('\n[atoms]\n')
-        change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom)
         for b in range(len(bead_types)):
             itp.write(
                 '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i,
@@ -1490,6 +1498,7 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         ring_beads = determine_ring_beads(ring_atoms, beads)
         charges = determine_charges(sequences[i], fragments_charges)
         bead_types = determine_bead_types(sequences[i], fragments_bead_types)
+        change_first_and_last_bead(resname_list, bead_types, first_atoms[i], last_atoms[i])
         mol = Chem.AddHs(mol)
         Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
                                         useRandomCoords=True)
@@ -1499,8 +1508,7 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         masses = get_standard_masses(bead_types, virtual)
 
         write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i,
-                  first_atoms[i], last_atoms[i])
+                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
 
 
 def main():
@@ -1551,7 +1559,8 @@ def main():
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(parametrize, i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par,
-                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in range(len(sequences))]
+                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in
+                   range(len(sequences))]
         # progress bar
         if par == 'yes':
             for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
