@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.4_alt"
+__version__ = "0.4.5_alt"
 __status__ = "Development"
 
 import os
@@ -16,6 +16,7 @@ import random
 import math
 import warnings
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -888,7 +889,7 @@ def get_ring_atoms(mol):
     return [list(ring) for ring in ring_systems]
 
 
-def get_coords(mol, beads):
+def get_coords(mol, beads, map_type):
     """ 
     Imported and modified from the cg_param_m3.py script
     """
@@ -898,13 +899,13 @@ def get_coords(mol, beads):
 
     cg_coords = []
     for bead in beads:
-        cg_coords.append(bead_coords(bead, conf, mol))
+        cg_coords.append(bead_coords(bead, conf, mol, map_type))
 
     return np.array(cg_coords)
 
 
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, itp_name, name, i):
+              masses, resname_list, map_type, itp_name, name, i):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -916,18 +917,19 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write('\n[atoms]\n')
         for b in range(len(bead_types)):
             itp.write(
-                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i, resname_list[b],
+                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i,
+                                                                            resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs)
-        angles = write_angles(itp, bonds, constraints, beads, mol, n_confs)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs, map_type)
+        angles = write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
             write_virtual_sites(itp, virtual, beads)
 
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs):
+def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs, map_type):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -946,7 +948,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs):
     coords = np.zeros((len(beads), 3))
     for conf in mol.GetConformers():
         for i, bead in enumerate(beads):
-            coords[i] = bead_coords(bead, conf, mol)
+            coords[i] = bead_coords(bead, conf, mol, map_type)
         for b, bond in enumerate(bonds):
             rs[b] += np.linalg.norm(np.subtract(coords[bond[0]], coords[bond[1]])) / n_confs
 
@@ -979,7 +981,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs):
     return bonds, constraints, dihedrals
 
 
-def write_angles(itp, bonds, constraints, beads, mol, n_confs):
+def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1004,7 +1006,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs):
         thetas = np.zeros(len(angles))
         for conf in mol.GetConformers():
             for i, bead in enumerate(beads):
-                coords[i] = bead_coords(bead, conf, mol)
+                coords[i] = bead_coords(bead, conf, mol, map_type)
             for a, angle in enumerate(angles):
                 vec1 = np.subtract(coords[angle[0]], coords[angle[1]])
                 vec1 = vec1 / np.linalg.norm(vec1)
@@ -1137,7 +1139,7 @@ def ring_bonding(real, virtual, A_cg, dihedrals):
     return A_cg, dihedrals
 
 
-def bead_coords(bead, conf, mol):
+def bead_coords(bead, conf, mol, map_type):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1146,13 +1148,13 @@ def bead_coords(bead, conf, mol):
     coords = np.array([0.0, 0.0, 0.0])
     total = 0.0
     for atom in bead:
-        if map == 'com':
+        if map_type == 'com':
             mass = mol.GetAtomWithIdx(atom).GetMass()
             coords += conf.GetAtomPosition(atom) * mass
             total += mass
         else:
             coords += conf.GetAtomPosition(atom)
-    if map == 'com':
+    if map_type == 'com':
         coords /= (total * 10.0)
     else:
         coords /= (len(bead) * 10.0)
@@ -1198,17 +1200,17 @@ def positive_integer(value):
     int_value = int(value)
     if int_value <= 0:
         raise argparse.ArgumentTypeError(
-            f"The number of conformers set by '-n_confs' must be an integer greater than 0.")
+            f"This number must be an integer greater than 0.")
     return int_value
 
 
-def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames):
+def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type):
     print(f"- Generating initial structure file from '{GRO}'.")
     # unwrap
     u = unwrapped_atomistic_structure(PATH, GRO, itp_list)
 
     # create mapped structure
-    mapped = mapped_structure(u, itp_list, mapping, sequences, vsomm_lists)
+    mapped = mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type)
 
     # add info
     add_residue_info(u, mapped, sequences, mapping, resnames)
@@ -1246,7 +1248,7 @@ def unwrapped_atomistic_structure(PATH, GRO, itp_list):
     return u
 
 
-def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists):
+def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
     # create the mapped structure (without ions) based on the unwrapped atomistic structure
     # wrapping at the end
     n_beads = 0  # get total number of beads
@@ -1260,7 +1262,7 @@ def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists):
         for j, bead in enumerate(mapping[i]):
             vsomm_indices = translate_mapping(bead, vsomm_lists[i])
             a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
-            if map == 'com':
+            if map_type == 'com':
                 coords.append(a.center_of_mass())
             else:
                 coords.append(a.center_of_geometry())
@@ -1377,6 +1379,33 @@ HS in water\n
     f.close()
 
 
+def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par, first_atoms, last_atoms,
+                n_confs, map_type, CG_PATH, itp_list):
+    beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
+                             vsomm_lists[i])
+    mapping.append(beads)
+    resname_list = create_resname_list(sequences[i], fragments_lengths)
+    resnames.append(resname_list)
+
+    if par == 'yes':
+        mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
+        ring_atoms = get_ring_atoms(mol)
+        A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
+        ring_beads = determine_ring_beads(ring_atoms, beads)
+        charges = determine_charges(sequences[i], fragments_charges)
+        bead_types = determine_bead_types(sequences[i], fragments_bead_types)
+        mol = Chem.AddHs(mol)
+        Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
+                                        useRandomCoords=True)
+        Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
+        coords0 = get_coords(mol, beads, map_type)  # coordinates of energy minimized molecules
+        virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
+        masses = get_standard_masses(bead_types, virtual)
+
+        write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
+                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Martini SOM - A tool for converting atomistic Soil Organic Matter '
                                                  '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
@@ -1387,6 +1416,7 @@ def main():
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
                         help='Shows the version of the script')
     parser.add_argument('-h', '--help', action='help', help='Shows this help message')
+    parser.add_argument('-nt', type=positive_integer, default=1, help='Number of threads')
     parser.add_argument('-input_dir', default=f'{os.path.dirname(os.path.abspath(__file__))}',
                         help='Path to the input directory with the atomistic topology files')
     parser.add_argument('-output_dir', default='INIT_cg',
@@ -1403,8 +1433,10 @@ def main():
     PATH = args.input_dir
     GRO = f'{PATH}/min_system.gro'
     CG_PATH = args.output_dir
-    map = args.map
+    map_type = args.map
     par = args.parametrize
+    n_confs = args.n_confs
+    num_threads = args.nt
 
     check_arguments(PATH, CG_PATH)
 
@@ -1419,36 +1451,16 @@ def main():
     resnames = []
     if par == 'yes':
         print(f' - Generating output files for {len(sequences)} HS molecules.')
-        loop = tqdm(range(len(sequences)))
-    else:
-        loop = range(len(sequences))
-    for i in loop:
-        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
-                                 vsomm_lists[i])
-        mapping.append(beads)
-        resname_list = create_resname_list(sequences[i], fragments_lengths)
-        resnames.append(resname_list)
 
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(parametrize, i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par,
+                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in range(len(sequences))]
+        # progress bar
         if par == 'yes':
-            mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
-            ring_atoms = get_ring_atoms(mol)
-            A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
-            ring_beads = determine_ring_beads(ring_atoms, beads)
-            charges = determine_charges(sequences[i], fragments_charges)
-            bead_types = determine_bead_types(sequences[i], fragments_bead_types)
-            mol = Chem.AddHs(mol)
-            n_confs = args.n_confs
-            Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
-                                            useRandomCoords=True)
-            Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-            coords0 = get_coords(mol, beads)  # coordinates of energy minimized molecules
-            virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
-            masses = get_standard_masses(bead_types, virtual)
+            for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
+                pass
 
-            write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                      resname_list, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
-
-    generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames)
+    generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type)
 
 
 if __name__ == "__main__":
