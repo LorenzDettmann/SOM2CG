@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.5_alt"
+__version__ = "0.5.0"
 __status__ = "Development"
 
 import os
@@ -383,6 +383,85 @@ fragments_vs = {
     'HS34p': {9: {0: 0.552, 3: 0}, 7: {0: -0.210, 1: 0.427, 2: 0}, 8: {1: 0.125, 2: 0.525, 3: 0}},
     'HS35': {},
     'HS35p': {}
+}
+
+fragments_modify_first = {
+    'HS22' : {
+        'pos' : 0,
+        'H' : 'TC5'
+    },
+    'HS30' : {
+        'pos' : 0,
+        'H' : 'TC5'
+    },
+    'HS30p' : {
+        'pos' : 0,
+        'H' : 'TC5'
+    },
+    'HS30fp' : {
+        'pos' : 0,
+        'H' : 'TC5'
+    }
+}
+
+fragments_modify_last = {
+    'HS2' : {
+        'pos' : -2,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS7' : {
+        'pos' : -2,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS8' : {
+        'pos' : -2,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS12' : {
+        'pos' : -3,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS12p' : {
+        'pos' : -3,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS16' : {
+        'pos' : -2,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS16p' : {
+        'pos' : -2,
+        'H' : 'TN6',
+        'C' : 'SN2a'
+    },
+    'HS25' : {
+        'pos' : -1,
+        'H' : 'TP1',
+        'C' : 'SN3r'
+    },
+    'HS25p' : {
+        'pos' : -1,
+        'H' : 'TP1',
+        'C' : 'SN3r'
+    },
+    'HS30' : {
+        'pos' : -1,
+        'H' : 'TC5'
+    },
+    'HS30p' : {
+        'pos' : -1,
+        'H' : 'TC5'
+    },
+    'HS30fp' : {
+        'pos' : -1,
+        'H' : 'TC5'
+    }
 }
 
 # fragments ending with an ether group
@@ -904,8 +983,24 @@ def get_coords(mol, beads, map_type):
     return np.array(cg_coords)
 
 
+def change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom):
+    # modify first bead in macromolecule, if fragment-atom pair is in the list
+    if resname_list[0] in fragments_modify_first.keys():
+        if first_atom in fragments_modify_first[resname_list[0]].keys():
+            bead_types[fragments_modify_first[resname_list[0]]['pos']] = fragments_modify_first[resname_list[0]][first_atom]
+        else:
+            pass
+
+    # same for last bead
+    if resname_list[-1] in fragments_modify_last.keys():
+        if last_atom in fragments_modify_last[resname_list[-1]].keys():
+            bead_types[fragments_modify_last[resname_list[-1]]['pos']] = fragments_modify_last[resname_list[-1]][last_atom]
+        else:
+            pass
+
+
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, map_type, itp_name, name, i):
+              masses, resname_list, map_type, itp_name, name, i, first_atom, last_atom):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -915,6 +1010,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write(f'{name}    1\n')
         # write atoms section
         itp.write('\n[atoms]\n')
+        change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom)
         for b in range(len(bead_types)):
             itp.write(
                 '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i,
@@ -1403,7 +1499,8 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         masses = get_standard_masses(bead_types, virtual)
 
         write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i,
+                  first_atoms[i], last_atoms[i])
 
 
 def main():
