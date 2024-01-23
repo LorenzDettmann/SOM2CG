@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 __status__ = "Development"
 
 import os
@@ -1025,15 +1025,17 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs, map_type)
-        angles = write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type)
+        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
             write_virtual_sites(itp, virtual, beads)
 
+    add_info(itp_name)
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs, map_type):
+
+def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -1041,7 +1043,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs, map_t
     # Construct bonded structures for ring systems, including dihedrals
     dihedrals = []
     for r, ring in enumerate(ring_atoms):
-        A_cg, dihedrals = ring_bonding(real[r], virtual, A_cg, dihedrals)
+        dihedrals = ring_bonding(real[r], dihedrals)
     itp.write('\n[bonds]\n')
     bonds = [list(pair) for pair in np.argwhere(A_cg) if pair[1] > pair[0]]
     constraints = []
@@ -1198,33 +1200,16 @@ def write_virtual_sites(itp, virtual_sites, beads):
         itp.write('{}\n'.format(excl))
 
 
-def ring_bonding(real, virtual, A_cg, dihedrals):
+def ring_bonding(real, dihedrals):
     """
     Imported and modified from the cg_param_m3.py script
     """
-    # Constructs constraint structure for ring systems
-
-    # Remove all bonds from virtual sites
-    for vs in list(virtual.keys()):
-        for i in range(A_cg.shape[0]):
-            A_cg[vs, i] = 0
-            A_cg[i, vs] = 0
-
-    # Construct outer frame
-    A_cg[real[0], real[-1]] = 1
-    A_cg[real[-1], real[0]] = 1
-    for r in range(len(real) - 1):
-        A_cg[real[r], real[r + 1]] = 1
-        A_cg[real[r + 1], real[r]] = 1
-
     # Construct inner frame and hinge dihedrals
     n_struts = len(real) - 3
     j = len(real) - 1
     k = 1
     struts = 0
     for s in range(int(math.ceil(n_struts / 2.0))):
-        A_cg[real[j], real[k]] = 1
-        A_cg[real[k], real[j]] = 1
         struts += 1
         i = (j + 1) % len(real)  # First one loops round to 0
         l = k + 1
@@ -1232,15 +1217,13 @@ def ring_bonding(real, virtual, A_cg, dihedrals):
         k += 1
         if struts == n_struts:
             break
-        A_cg[real[j], real[k]] = 1
-        A_cg[real[k], real[j]] = 1
         struts += 1
         i = k - 1
         l = j - 1
         dihedrals.append([real[i], real[j], real[k], real[l]])
         j -= 1
 
-    return A_cg, dihedrals
+    return dihedrals
 
 
 def bead_coords(bead, conf, mol, map_type):
@@ -1321,6 +1304,7 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
 
     # save structure file
     mapped.atoms.write(f'{CG_PATH}/mapped.gro')
+    add_info(f'{CG_PATH}/mapped.gro')
 
     # write water structure file
     write_water_file(CG_PATH, u)
@@ -1434,7 +1418,6 @@ def write_water_file(CG_PATH, u):
     if not os.path.exists(f"{CG_PATH}/{file}"):
         f = open(f"{CG_PATH}/{file}", "w")
         f.write(water_gro)
-        f.close()
 
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
@@ -1473,7 +1456,7 @@ HS in water\n
         elif ions.resnames[0] == "NA+":
             resname = "NA"
         else:
-            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            print(f"Error: Resname {ions.resnames[0]} of ions is unknown.")
             abort_script()
         f.write(f'{resname}\t\t{N_ions}\n')
 
@@ -1481,6 +1464,7 @@ HS in water\n
         f.write(f'W\t\t{N}')
 
     f.close()
+    add_info(f"{CG_PATH}/{file}")
 
 
 def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par, first_atoms, last_atoms,
@@ -1506,9 +1490,35 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         coords0 = get_coords(mol, beads, map_type)  # coordinates of energy minimized molecules
         virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
-
         write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
                   resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+
+
+def replace_first_line(file, info):
+    # replace first line with string (for replacing first line of .gro file with information)
+    with open(file, 'r') as f:
+        lines = f.readlines()
+
+    lines[0] = info + " using MDAnalysis\n"
+
+    with open(file, 'w') as f:
+        f.writelines(lines)
+
+
+def add_info(file):
+    # add information on version number of this script into the file
+    info = f"This file was generated with the martini-som script v{__version__}"
+    with open(file, 'r') as f:
+        content = f.read()
+
+    if file.endswith('.top') or file.endswith('.itp'):
+        info = "; " + info + "\n"
+        with open(file, 'w') as f:
+            f.write(info + content)
+    elif file.endswith('.gro'):
+        replace_first_line(file, info)
+    else:
+        print("Warning: Unknown file type for adding information.")
 
 
 def main():
