@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 __status__ = "Development"
 
 import os
@@ -718,7 +718,7 @@ def create_vsomm_list(sequence, first_add=1, last_add=1, first_atom='H', last_at
                 else:
                     index_last_atom += get_last(FRG)
             if vsomm_list[index_last_atom] != get_largest_index(vsomm_list):
-                print("Something went wrong.")
+                print("Something went wrong when creating the VSOMM list.")
             vsomm_list[index_last_atom] = np.array([vsomm_list[index_last_atom], vsomm_list[index_last_atom] + 1])
         elif last_atom == 'C':
             vsomm_list = np.append(vsomm_list, get_largest_index(vsomm_list) + 1)
@@ -1277,7 +1277,7 @@ def check_arguments(PATH, CG_PATH):
                     or file == topology_file]
 
     if output_files:
-        print(f"Warning: The given output directory 'CG_PATH' does already contain topology files.")
+        print(f"Warning: The given output directory '{CG_PATH}' does already contain topology files.")
         user_input = input("Would you like to continue and overwrite existing files? (y/n) ")
         if user_input.lower() != 'y':
             abort_script()
@@ -1392,7 +1392,7 @@ def add_residue_info(u, mapped, sequences, mapping, resnames):
         elif ions.resnames[0] == "NA+":
             resname = "NA"
         else:
-            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            print(f"Error: Resname {ions.resnames[0]} of ions is unknown.")
             abort_script()
         for i in range(len(ions.atoms)):
             resids.append(len(sequences) + i + 1)
