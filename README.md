@@ -32,7 +32,7 @@ python3 martini-som.py [-V] [-h] [-nt 'number of threads'] [-input_dir 'input di
 - [X] Option to output only the coarse-grained structure file
 - [X] Generate topol.top file
 - [X] More accurate beads for first and last groups for selected fragments
-- [ ] Write into .gro, .top and .itp files the version number
+- [X] Write into .gro, .top and .itp files the version number
 ### Optional
 - [X] Rewrite "translate_atoms" function
 - [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
