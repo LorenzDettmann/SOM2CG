@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 __status__ = "Development"
 
 import os
