@@ -466,8 +466,8 @@ fragments_modify_last = {
 
 # fragments ending with an ether group
 FRG_O = ['HS2', 'HS7', 'HS8', 'HS12', 'HS12p', 'HS16', 'HS16p', 'HS25', 'HS25p']
-# fragments with first and last bead having the same index
-FRG_same = ['HS4', 'HS4p', 'HS11' 'HS13', 'HS13p', 'HS19', 'HS19p']
+# fragments with first and last bead having the same index, and having more than one bead (could also write a function)
+FRG_same = ['HS4', 'HS4p', 'HS13', 'HS13p', 'HS19', 'HS19p']
 
 # translation from RDKit to VSOMM2
 fragments_vsomm_indices = {
