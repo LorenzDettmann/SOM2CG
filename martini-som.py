@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.1"
+__version__ = "0.6.3"
 __status__ = "Development"
 
 import os
@@ -1471,9 +1471,9 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
                 n_confs, map_type, CG_PATH, itp_list):
     beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
                              vsomm_lists[i])
-    mapping.append(beads)
+    mapping.append((i, beads))
     resname_list = create_resname_list(sequences[i], fragments_lengths)
-    resnames.append(resname_list)
+    resnames.append((i, resname_list))
 
     if par == 'yes':
         mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
@@ -1575,6 +1575,10 @@ def main():
         if par == 'yes':
             for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
                 pass
+
+    # sort mapping and resnames list, because due to the parallelization, the right order could have been changed
+    mapping = [pair[1] for pair in sorted(mapping, key=lambda x: x[0])]
+    resnames = [pair[1] for pair in sorted(resnames, key=lambda x: x[0])]
 
     generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type)
 
