@@ -3,7 +3,7 @@
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.4.5_alt"
+__version__ = "0.6.3"
 __status__ = "Development"
 
 import os
@@ -385,10 +385,89 @@ fragments_vs = {
     'HS35p': {}
 }
 
+fragments_modify_first = {
+    'HS22': {
+        'pos': 0,
+        'H': 'TC5'
+    },
+    'HS30': {
+        'pos': 0,
+        'H': 'TC5'
+    },
+    'HS30p': {
+        'pos': 0,
+        'H': 'TC5'
+    },
+    'HS30fp': {
+        'pos': 0,
+        'H': 'TC5'
+    }
+}
+
+fragments_modify_last = {
+    'HS2': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS7': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS8': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS12': {
+        'pos': -3,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS12p': {
+        'pos': -3,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS16': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS16p': {
+        'pos': -2,
+        'H': 'TN6',
+        'C': 'SN2a'
+    },
+    'HS25': {
+        'pos': -1,
+        'H': 'TP1',
+        'C': 'SN3r'
+    },
+    'HS25p': {
+        'pos': -1,
+        'H': 'TP1',
+        'C': 'SN3r'
+    },
+    'HS30': {
+        'pos': -1,
+        'H': 'TC5'
+    },
+    'HS30p': {
+        'pos': -1,
+        'H': 'TC5'
+    },
+    'HS30fp': {
+        'pos': -1,
+        'H': 'TC5'
+    }
+}
+
 # fragments ending with an ether group
 FRG_O = ['HS2', 'HS7', 'HS8', 'HS12', 'HS12p', 'HS16', 'HS16p', 'HS25', 'HS25p']
-# fragments with first and last bead having the same index
-FRG_same = ['HS4', 'HS4p', 'HS11' 'HS13', 'HS13p', 'HS19', 'HS19p']
+# fragments with first and last bead having the same index, and having more than one bead (function for this possible)
+FRG_same = ['HS4', 'HS4p', 'HS13', 'HS13p', 'HS19', 'HS19p']
 
 # translation from RDKit to VSOMM2
 fragments_vsomm_indices = {
@@ -521,11 +600,14 @@ def read_itps(PATH, GRO):
             else:
                 first_atoms.append('C')
                 first_add.append(1)
+        elif u1.atoms[0].type == 'CH2':
+            first_atoms.append('H')
+            first_add.append(0)
         elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
             first_atoms.append('O')
             first_add.append(2)
         else:
-            print(f'No rule for atom type {u1.atoms[0].type}.')
+            print(f'{file}: No rule for first atom type {u1.atoms[0].type}.')
             first_atoms.append('H')
             first_add.append(0)
         if u1.atoms[-1].type == 'HC':
@@ -539,6 +621,9 @@ def read_itps(PATH, GRO):
             else:
                 last_atoms.append('C')
                 last_add.append(1)
+        elif u1.atoms[-1].type == 'CH2':
+            last_atoms.append('H')
+            last_add.append(0)
         elif u1.atoms[-1].type == 'H':
             if u.atoms[n - 1].resname in FRG_O:
                 last_atoms.append('H')
@@ -547,7 +632,7 @@ def read_itps(PATH, GRO):
                 last_atoms.append('O')
                 last_add.append(2)
         else:
-            print(f'No rule for atom type {u1.atoms[0].type}.')
+            print(f'{file}: No rule for last atom type {u1.atoms[0].type}.')
             last_atoms.append('H')
             last_add.append(0)
 
@@ -633,7 +718,7 @@ def create_vsomm_list(sequence, first_add=1, last_add=1, first_atom='H', last_at
                 else:
                     index_last_atom += get_last(FRG)
             if vsomm_list[index_last_atom] != get_largest_index(vsomm_list):
-                print("Something went wrong.")
+                print("Something went wrong when creating the VSOMM list.")
             vsomm_list[index_last_atom] = np.array([vsomm_list[index_last_atom], vsomm_list[index_last_atom] + 1])
         elif last_atom == 'C':
             vsomm_list = np.append(vsomm_list, get_largest_index(vsomm_list) + 1)
@@ -781,6 +866,24 @@ def create_A_matrix(sequence, fragments_connections, fragments_lengths, FRG_same
     return matrix_from_list(bonds, total_no_of_beads)
 
 
+def change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom):
+    # modify first bead in macromolecule, if fragment-atom pair is in the list
+    if resname_list[0] in fragments_modify_first.keys():
+        if first_atom in fragments_modify_first[resname_list[0]].keys():
+            bead_types[fragments_modify_first[resname_list[0]]['pos']] = fragments_modify_first[resname_list[0]][
+                first_atom]
+        else:
+            pass
+
+    # same for last bead
+    if resname_list[-1] in fragments_modify_last.keys():
+        if last_atom in fragments_modify_last[resname_list[-1]].keys():
+            bead_types[fragments_modify_last[resname_list[-1]]['pos']] = fragments_modify_last[resname_list[-1]][
+                last_atom]
+        else:
+            pass
+
+
 def determine_bead_types(sequence, fragments_bead_types):
     bead_types = []
     for FRG in sequence:
@@ -849,7 +952,8 @@ def get_standard_masses(bead_types, virtual):
         else:
             masses.append(72)
 
-    for vsite, refs in virtual.items():
+    # sort virtual sites to keep order of hierarchy
+    for vsite, refs in sorted(virtual.items(), key=lambda x: len(x[1]), reverse=True):
         vmass = masses[vsite]
         masses[vsite] = 0
         weight = len(refs.items())
@@ -921,15 +1025,17 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, virtual, mol, n_confs, map_type)
-        angles = write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type)
+        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
             write_virtual_sites(itp, virtual, beads)
 
+    add_info(itp_name)
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs, map_type):
+
+def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
     """
     Imported and modified from the cg_param_m3.py script
     """
@@ -937,7 +1043,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, virtual, mol, n_confs, map_t
     # Construct bonded structures for ring systems, including dihedrals
     dihedrals = []
     for r, ring in enumerate(ring_atoms):
-        A_cg, dihedrals = ring_bonding(real[r], virtual, A_cg, dihedrals)
+        dihedrals = ring_bonding(real[r], dihedrals)
     itp.write('\n[bonds]\n')
     bonds = [list(pair) for pair in np.argwhere(A_cg) if pair[1] > pair[0]]
     constraints = []
@@ -1094,33 +1200,16 @@ def write_virtual_sites(itp, virtual_sites, beads):
         itp.write('{}\n'.format(excl))
 
 
-def ring_bonding(real, virtual, A_cg, dihedrals):
+def ring_bonding(real, dihedrals):
     """
     Imported and modified from the cg_param_m3.py script
     """
-    # Constructs constraint structure for ring systems
-
-    # Remove all bonds from virtual sites
-    for vs in list(virtual.keys()):
-        for i in range(A_cg.shape[0]):
-            A_cg[vs, i] = 0
-            A_cg[i, vs] = 0
-
-    # Construct outer frame
-    A_cg[real[0], real[-1]] = 1
-    A_cg[real[-1], real[0]] = 1
-    for r in range(len(real) - 1):
-        A_cg[real[r], real[r + 1]] = 1
-        A_cg[real[r + 1], real[r]] = 1
-
     # Construct inner frame and hinge dihedrals
     n_struts = len(real) - 3
     j = len(real) - 1
     k = 1
     struts = 0
     for s in range(int(math.ceil(n_struts / 2.0))):
-        A_cg[real[j], real[k]] = 1
-        A_cg[real[k], real[j]] = 1
         struts += 1
         i = (j + 1) % len(real)  # First one loops round to 0
         l = k + 1
@@ -1128,15 +1217,13 @@ def ring_bonding(real, virtual, A_cg, dihedrals):
         k += 1
         if struts == n_struts:
             break
-        A_cg[real[j], real[k]] = 1
-        A_cg[real[k], real[j]] = 1
         struts += 1
         i = k - 1
         l = j - 1
         dihedrals.append([real[i], real[j], real[k], real[l]])
         j -= 1
 
-    return A_cg, dihedrals
+    return dihedrals
 
 
 def bead_coords(bead, conf, mol, map_type):
@@ -1190,7 +1277,7 @@ def check_arguments(PATH, CG_PATH):
                     or file == topology_file]
 
     if output_files:
-        print(f"Warning: The given output directory 'CG_PATH' does already contain topology files.")
+        print(f"Warning: The given output directory '{CG_PATH}' does already contain topology files.")
         user_input = input("Would you like to continue and overwrite existing files? (y/n) ")
         if user_input.lower() != 'y':
             abort_script()
@@ -1217,6 +1304,7 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
 
     # save structure file
     mapped.atoms.write(f'{CG_PATH}/mapped.gro')
+    add_info(f'{CG_PATH}/mapped.gro')
 
     # write water structure file
     write_water_file(CG_PATH, u)
@@ -1304,7 +1392,7 @@ def add_residue_info(u, mapped, sequences, mapping, resnames):
         elif ions.resnames[0] == "NA+":
             resname = "NA"
         else:
-            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            print(f"Error: Resname {ions.resnames[0]} of ions is unknown.")
             abort_script()
         for i in range(len(ions.atoms)):
             resids.append(len(sequences) + i + 1)
@@ -1330,7 +1418,6 @@ def write_water_file(CG_PATH, u):
     if not os.path.exists(f"{CG_PATH}/{file}"):
         f = open(f"{CG_PATH}/{file}", "w")
         f.write(water_gro)
-        f.close()
 
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
@@ -1369,7 +1456,7 @@ HS in water\n
         elif ions.resnames[0] == "NA+":
             resname = "NA"
         else:
-            print("Error: Resname {ions.resnames[0]} of ions is unknown.")
+            print(f"Error: Resname {ions.resnames[0]} of ions is unknown.")
             abort_script()
         f.write(f'{resname}\t\t{N_ions}\n')
 
@@ -1377,15 +1464,16 @@ HS in water\n
         f.write(f'W\t\t{N}')
 
     f.close()
+    add_info(f"{CG_PATH}/{file}")
 
 
 def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par, first_atoms, last_atoms,
                 n_confs, map_type, CG_PATH, itp_list):
     beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
                              vsomm_lists[i])
-    mapping.append(beads)
+    mapping.append((i, beads))
     resname_list = create_resname_list(sequences[i], fragments_lengths)
-    resnames.append(resname_list)
+    resnames.append((i, resname_list))
 
     if par == 'yes':
         mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
@@ -1394,6 +1482,7 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         ring_beads = determine_ring_beads(ring_atoms, beads)
         charges = determine_charges(sequences[i], fragments_charges)
         bead_types = determine_bead_types(sequences[i], fragments_bead_types)
+        change_first_and_last_bead(resname_list, bead_types, first_atoms[i], last_atoms[i])
         mol = Chem.AddHs(mol)
         Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
                                         useRandomCoords=True)
@@ -1401,9 +1490,35 @@ def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resname
         coords0 = get_coords(mol, beads, map_type)  # coordinates of energy minimized molecules
         virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
-
         write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
                   resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+
+
+def replace_first_line(file, info):
+    # replace first line with string (for replacing first line of .gro file with information)
+    with open(file, 'r') as f:
+        lines = f.readlines()
+
+    lines[0] = info + " using MDAnalysis\n"
+
+    with open(file, 'w') as f:
+        f.writelines(lines)
+
+
+def add_info(file):
+    # add information on version number of this script into the file
+    info = f"This file was generated with the martini-som script v{__version__}"
+    with open(file, 'r') as f:
+        content = f.read()
+
+    if file.endswith('.top') or file.endswith('.itp'):
+        info = "; " + info + "\n"
+        with open(file, 'w') as f:
+            f.write(info + content)
+    elif file.endswith('.gro'):
+        replace_first_line(file, info)
+    else:
+        print("Warning: Unknown file type for adding information.")
 
 
 def main():
@@ -1454,11 +1569,16 @@ def main():
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(parametrize, i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par,
-                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in range(len(sequences))]
+                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in
+                   range(len(sequences))]
         # progress bar
         if par == 'yes':
             for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
                 pass
+
+    # sort mapping and resnames list, because due to the parallelization, the right order could have been changed
+    mapping = [pair[1] for pair in sorted(mapping, key=lambda x: x[0])]
+    resnames = [pair[1] for pair in sorted(resnames, key=lambda x: x[0])]
 
     generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type)
 
