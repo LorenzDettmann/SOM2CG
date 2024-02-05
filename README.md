@@ -43,6 +43,3 @@ python3 martini-som.py [-V] [-h] [-nt 'number of threads'] [-input_dir 'input di
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggestions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
-
-## License
-The licence has to be clarified ...
