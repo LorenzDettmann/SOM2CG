@@ -21,25 +21,21 @@ using the following arguments:
 python3 martini-som.py [-V] [-h] [-nt 'number of threads'] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers'] [-map '"cog" or "com" mapping'] [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
 ```
 
-## Roadmap
-### Important / Nice-to-have
-- [X] Include options for changing the standard input and output directories, as well as `nconf`
-- [X] Complete information on all fragments for the conversion of the RDKit representation to the VSOMM2 representation
-- [X] Generalize the script for use with sodium ions and with no ions
-- [X] Remove redundant functions and dependencies on other packages
-- [X] Add more information to the visual output
-- [X] Add functionality for switching between COM and COG mapping
-- [X] Option to output only the coarse-grained structure file
-- [X] Generate topol.top file
-- [X] More accurate beads for first and last groups for selected fragments
-- [X] Write into .gro, .top and .itp files the version number
-### Optional
-- [X] Rewrite "translate_atoms" function
-- [X] Rewrite "merge_smiles" function to be able to handle arbitrary large molecules
-- [X] Parallelization support
-- [ ] Rewrite and optimize functions from cg_param_m3.py
-- [ ] More accurate VS parameters for first and last fragment of a molecule, and for COM mapping
-- [ ] More accurate bead assignment for first and last atom groups for all fragments (perhaps new mapping needed)
-
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or suggestions for any additional features, feel free to create a pull request, or simply open a new issue. Thank you!
+
+## Acknowledgments
+Parts of this code are based on work by Mark A. Miller and coworkers, used with permission.
+These parts are subject to the following citations:
+
+T. D. Potter, N. Haywood, A. Teixeira, G. Hodges, E. L. Barrett, and M. A. Miller
+Partitioning into phosphatidylcholine–cholesterol membranes: liposome measurements, coarse-grained simulations, 
+and implications for bioaccumulation
+Environmental Science: Processes & Impacts, Issue 6 (2023), https://doi.org/10.1039/D3EM00081H 
+
+T. D. Potter, E. L. Barrett, and M. A. Miller
+Automated Coarse-Grained Mapping Algorithm for the Martini Force Field and Benchmarks for Membrane Water Partitioning
+J. Chem. Theory Comput., 17 (2021), pp. 5777−5791, https://doi.org/10.1021/acs.jctc.1c00322
+
+Please cite these works if you use this code in your research.
+We thank Mark. A. Miller and coworkers for their contributions.
