@@ -1,10 +1,50 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+"""
+MIT License
+
+Copyright (c) 2024 Lorenz Friedrich Dettmann
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Parts of this code are based on work by Mark A. Miller and coworkers, used with permission.
+These parts are subject to the following citations:
+
+T. D. Potter, N. Haywood, A. Teixeira, G. Hodges, E. L. Barrett, and M. A. Miller
+Partitioning into phosphatidylcholine–cholesterol membranes: liposome measurements, coarse-grained simulations,
+and implications for bioaccumulation
+Environmental Science: Processes & Impacts, Issue 6 (2023), https://doi.org/10.1039/D3EM00081H
+
+T. D. Potter, E. L. Barrett, and M. A. Miller
+Automated Coarse-Grained Mapping Algorithm for the Martini Force Field and Benchmarks for Membrane Water Partitioning
+J. Chem. Theory Comput., 17 (2021), pp. 5777−5791, https://doi.org/10.1021/acs.jctc.1c00322
+
+Please cite these works if you use this code in your research.
+We thank Mark. A. Miller and coworkers for their contributions.
+"""
+
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.3"
+__version__ = "0.6.4"
 __status__ = "Development"
+__licence__ = "MIT"
 
 import os
 import argparse
@@ -972,8 +1012,10 @@ def create_resname_list(sequence, fragments_lengths):
 
 
 def get_ring_atoms(mol):
-    """ 
-    Imported and modified from the cg_param_m3.py script
+    """
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # get ring atoms and systems of joined rings
     rings = mol.GetRingInfo().AtomRings()
@@ -994,8 +1036,10 @@ def get_ring_atoms(mol):
 
 
 def get_coords(mol, beads, map_type):
-    """ 
-    Imported and modified from the cg_param_m3.py script
+    """
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Calculates coordinates for output gro file
     mol_Hs = Chem.AddHs(mol)
@@ -1011,7 +1055,9 @@ def get_coords(mol, beads, map_type):
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
               masses, resname_list, map_type, itp_name, name, i):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # writes gromacs topology file
     with open(itp_name, 'w') as itp:
@@ -1037,7 +1083,9 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
 
 def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Writes [bonds] and [constraints] blocks in itp file
     # Construct bonded structures for ring systems, including dihedrals
@@ -1089,7 +1137,9 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
 
 def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
     k = 250.0
@@ -1129,7 +1179,9 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
 
 def write_dihedrals(itp, dihedrals, coords0):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Writes hinge dihedrals to itp file
     # Dihedrals chosen in ring_bonding
@@ -1155,7 +1207,9 @@ def write_dihedrals(itp, dihedrals, coords0):
 
 def write_virtual_sites(itp, virtual_sites, beads):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Write [virtual_sites] block to itp file
     # itp.write('\n[virtual_sitesn]\n')
@@ -1202,7 +1256,9 @@ def write_virtual_sites(itp, virtual_sites, beads):
 
 def ring_bonding(real, dihedrals):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Construct inner frame and hinge dihedrals
     n_struts = len(real) - 3
@@ -1228,7 +1284,9 @@ def ring_bonding(real, dihedrals):
 
 def bead_coords(bead, conf, mol, map_type):
     """
-    Imported and modified from the cg_param_m3.py script
+    This function is based on the work of Mark A. Miller and coworkers.
+    Modifications were made for this project.
+    Refer to the main license text for citation information.
     """
     # Get coordinates of a bead
 
