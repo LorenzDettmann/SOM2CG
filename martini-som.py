@@ -43,7 +43,6 @@ We thank Mark. A. Miller and coworkers for their contributions.
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
 __version__ = "0.6.4"
-__status__ = "Development"
 __licence__ = "MIT"
 
 import os
