@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 __licence__ = "MIT"
 
 import os
@@ -1291,19 +1291,32 @@ def bead_coords(bead, conf, mol, map_type):
 
     coords = np.array([0.0, 0.0, 0.0])
     total = 0.0
-    for atom in bead:
-        if map_type == 'com':
-            mass = mol.GetAtomWithIdx(atom).GetMass()
-            coords += conf.GetAtomPosition(atom) * mass
-            total += mass
-        else:
-            coords += conf.GetAtomPosition(atom)
-    if map_type == 'com':
-        coords /= (total * 10.0)
-    else:
-        coords /= (len(bead) * 10.0)
+    for heavy_atom in bead:
+        hydrogens = find_hydrogen_indices(mol, heavy_atom)
+        atoms = hydrogens + [heavy_atom]
+        for atom in atoms:
+            if map_type == 'com':
+                mass = mol.GetAtomWithIdx(atom).GetMass()
+                coords += conf.GetAtomPosition(atom) * mass
+                total += mass
+            else:
+                coords += conf.GetAtomPosition(atom)
+                total += 1
+
+    coords /= (total * 10.0)
 
     return coords
+
+
+def find_hydrogen_indices(mol, heavy_atom_index):
+    # finds the indices of hydrogen atoms connected to a given heavy atom in the molecule
+    hydrogen_indices = []
+    heavy_atom = mol.GetAtomWithIdx(heavy_atom_index)
+    for neighbor_atom in heavy_atom.GetNeighbors():
+        # hydrogen
+        if neighbor_atom.GetAtomicNum() == 1:
+            hydrogen_indices.append(neighbor_atom.GetIdx())
+    return hydrogen_indices
 
 
 def abort_script():
