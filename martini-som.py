@@ -954,7 +954,7 @@ def increase_indices(dct, increase):
     mod = {}
     for key, value in dct.items():
         if isinstance(value, dict):
-            # if dictionary, than do it again
+            # if dictionary, then do it again
             mod[key + increase] = increase_indices(value, increase)
         else:
             mod[key + increase] = value
