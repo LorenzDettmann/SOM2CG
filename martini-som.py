@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 __licence__ = "MIT"
 
 import os
@@ -51,7 +51,6 @@ import numpy as np
 from rdkit import Chem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-import random
 import math
 import warnings
 from tqdm import tqdm
@@ -1537,31 +1536,23 @@ HS in water\n
     add_info(f"{CG_PATH}/{file}")
 
 
-def parametrize(i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par, first_atoms, last_atoms,
+def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
                 n_confs, map_type, CG_PATH, itp_list):
-    beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
-                             vsomm_lists[i])
-    mapping.append((i, beads))
-    resname_list = create_resname_list(sequences[i], fragments_lengths)
-    resnames.append((i, resname_list))
-
-    if par == 'yes':
         mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
         ring_atoms = get_ring_atoms(mol)
         A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
-        ring_beads = determine_ring_beads(ring_atoms, beads)
+        ring_beads = determine_ring_beads(ring_atoms, mapping[i])
         charges = determine_charges(sequences[i], fragments_charges)
         bead_types = determine_bead_types(sequences[i], fragments_bead_types)
-        change_first_and_last_bead(resname_list, bead_types, first_atoms[i], last_atoms[i])
+        change_first_and_last_bead(resnames[i], bead_types, first_atoms[i], last_atoms[i])
         mol = Chem.AddHs(mol)
-        Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs, randomSeed=random.randint(1, 1000),
-                                        useRandomCoords=True)
+        Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs)
         Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-        coords0 = get_coords(mol, beads, map_type)  # coordinates of energy minimized molecules
+        coords0 = get_coords(mol, mapping[i], map_type)  # coordinates of energy minimized molecules
         virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
-        write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, masses,
-                  resname_list, map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+        write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs, virtual, real, masses,
+                  resnames[i], map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
 
 
 def replace_first_line(file, info):
@@ -1624,31 +1615,31 @@ def main():
     num_threads = args.nt
 
     check_arguments(PATH, CG_PATH)
-
+    print('- Reading atomistic topology files.')
     first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(PATH, GRO)
 
     vsomm_lists = []
+    mapping = []
+    resnames = []
     for i, sequence in enumerate(sequences):
         vsomm_list = create_vsomm_list(sequence, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
         vsomm_lists.append(vsomm_list)
+        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
+                                 vsomm_lists[i])
+        mapping.append(beads)
+        resname_list = create_resname_list(sequences[i], fragments_lengths)
+        resnames.append(resname_list)
 
-    mapping = []
-    resnames = []
     if par == 'yes':
         print(f' - Generating output files for {len(sequences)} HS molecules.')
 
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(parametrize, i, sequences, first_add, last_add, vsomm_lists, mapping, resnames, par,
-                                   first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in
-                   range(len(sequences))]
-        # progress bar
-        if par == 'yes':
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(parametrize, i, sequences, mapping, resnames,
+                                       first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in
+                       range(len(sequences))]
+            # progress bar
             for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
                 pass
-
-    # sort mapping and resnames list, because due to the parallelization, the right order could have been changed
-    mapping = [pair[1] for pair in sorted(mapping, key=lambda x: x[0])]
-    resnames = [pair[1] for pair in sorted(resnames, key=lambda x: x[0])]
 
     generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type)
 
