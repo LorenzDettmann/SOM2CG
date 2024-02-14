@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.6"
+__version__ = "0.6.7"
 __licence__ = "MIT"
 
 import os
@@ -1360,8 +1360,8 @@ def positive_integer(value):
     return int_value
 
 
-def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type):
-    print(f"- Generating initial structure file from '{GRO}'.")
+def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par):
+    print(f" - Generating initial structure file from '{GRO}'.")
     # unwrap
     u = unwrapped_atomistic_structure(PATH, GRO, itp_list)
 
@@ -1378,8 +1378,9 @@ def generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vs
     # write water structure file
     write_water_file(CG_PATH, u)
 
-    # write topology file
-    write_top_file(CG_PATH, u, itp_list)
+    if par == 'yes':
+        # write topology file
+        write_top_file(CG_PATH, u, itp_list)
 
 
 def unwrapped_atomistic_structure(PATH, GRO, itp_list):
@@ -1491,7 +1492,7 @@ def write_water_file(CG_PATH, u):
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
 
-    print('- Done')
+    print(' - Done')
     if N > 0:
         print(
             f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
@@ -1615,7 +1616,7 @@ def main():
     num_threads = args.nt
 
     check_arguments(PATH, CG_PATH)
-    print('- Reading atomistic topology files.')
+    print(' - Reading atomistic topology files.')
     first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(PATH, GRO)
 
     vsomm_lists = []
@@ -1641,7 +1642,7 @@ def main():
             for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
                 pass
 
-    generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type)
+    generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par)
 
 
 if __name__ == "__main__":
