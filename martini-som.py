@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.6.7"
+__version__ = "0.7.0"
 __licence__ = "MIT"
 
 import os
@@ -1033,15 +1033,14 @@ def get_ring_atoms(mol):
     return [list(ring) for ring in ring_systems]
 
 
-def get_coords(mol, beads, map_type):
+def get_coords(mol, beads, map_type, min_energy_idx):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
     Refer to the main license text for citation information.
     """
     # Calculates coordinates for output gro file
-    mol_Hs = Chem.AddHs(mol)
-    conf = mol_Hs.GetConformer(0)
+    conf = mol.GetConformer(min_energy_idx)
 
     cg_coords = []
     for bead in beads:
@@ -1548,12 +1547,14 @@ def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
         change_first_and_last_bead(resnames[i], bead_types, first_atoms[i], last_atoms[i])
         mol = Chem.AddHs(mol)
         Chem.AllChem.EmbedMultipleConfs(mol, numConfs=n_confs)
-        Chem.AllChem.UFFOptimizeMoleculeConfs(mol)
-        coords0 = get_coords(mol, mapping[i], map_type)  # coordinates of energy minimized molecules
+        n_confs_generated = mol.GetNumConformers()  # actual number of conformers that were generated
+        energy_list = Chem.AllChem.UFFOptimizeMoleculeConfs(mol, maxIters=1000)
+        min_energy_idx = min(range(len(energy_list)), key=energy_list.__getitem__)
+        coords0 = get_coords(mol, mapping[i], map_type, min_energy_idx)  # coordinates of energy minimized molecules
         virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
         masses = get_standard_masses(bead_types, virtual)
-        write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs, virtual, real, masses,
-                  resnames[i], map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
+        write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs_generated, virtual, real,
+                  masses, resnames[i], map_type, f'{CG_PATH}/{itp_list[i]}', itp_list[i][:-4], i)
 
 
 def replace_first_line(file, info):
@@ -1604,6 +1605,8 @@ def main():
                         help='Apply center of geometry (cog) or center of mass (com) mapping')
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
                         help='Parametrize the molecules, or only output the mapped structure file')
+    parser.add_argument('-with_progress_bar', default='yes', choices=['yes', 'no'],
+                        help='Activates a progress bar, could be turned off when redirecting the output into a file')
 
     args = parser.parse_args()
     # input and output locations
@@ -1614,6 +1617,7 @@ def main():
     par = args.parametrize
     n_confs = args.n_confs
     num_threads = args.nt
+    progress_bar = args.with_progress_bar
 
     check_arguments(PATH, CG_PATH)
     print(' - Reading atomistic topology files.')
@@ -1639,8 +1643,14 @@ def main():
                                        first_atoms, last_atoms, n_confs, map_type, CG_PATH, itp_list) for i in
                        range(len(sequences))]
             # progress bar
-            for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
-                pass
+            if progress_bar == 'yes':
+                for _ in tqdm(as_completed(futures), total=len(sequences), ncols=120):
+                    pass
+            else:
+                done_tasks = 0
+                for _ in as_completed(futures):
+                    done_tasks += 1
+                    print(f'Progress: {done_tasks}/{len(sequences)}')
 
     generate_structure_file(PATH, GRO, CG_PATH, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par)
 
