@@ -555,7 +555,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
     itp.write('\n[bonds]\n')
     bonds = [list(pair) for pair in np.argwhere(A_cg) if pair[1] > pair[0]]
     constraints = []
-    k = 1250.0
+    k = 5000.0
 
     # Get average bond lengths from all conformers
     rs = np.zeros(len(bonds))
@@ -602,7 +602,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
     Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
-    k = 25.0
+    k = 250.0
 
     # Get list of angles
     angles = []
