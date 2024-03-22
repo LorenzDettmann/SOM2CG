@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 __licence__ = "MIT"
 
 import os
@@ -513,7 +513,7 @@ def get_coords(mol, beads, map_type, min_energy_idx):
 
 
 def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
-              masses, resname_list, map_type, itp_name, name, i):
+              masses, resname_list, map_type, itp_name, name, i, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -531,17 +531,17 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type, sequence)
         write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
-            write_virtual_sites(itp, virtual, beads)
+            write_virtual_sites(itp, virtual, beads, A_cg)
 
     add_info(itp_name)
 
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
+def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -555,7 +555,7 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
     itp.write('\n[bonds]\n')
     bonds = [list(pair) for pair in np.argwhere(A_cg) if pair[1] > pair[0]]
     constraints = []
-    k = 5000.0
+    k_std = 5000.0
 
     # Get average bond lengths from all conformers
     rs = np.zeros(len(bonds))
@@ -577,7 +577,8 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
                 con_rs.append(r)
                 break
         if not share_ring:
-            itp.write('{:5d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(bond[0] + 1, bond[1] + 1, 1, r, k))
+            k = get_bond_fc(sequence, bond[0], bond[1], k_std)
+            itp.write('{:5d}{:3d}{:5d}{:10.3f}{:10.2f}\n'.format(bond[0] + 1, bond[1] + 1, 1, r, k))
 
     # Write constraints
     if len(constraints) > 0:
@@ -592,7 +593,27 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type):
             itp.write('{:5d}{:3d}{:5d}{:10.3f}\n'.format(con[0] + 1, con[1] + 1, 1, r))
         itp.write('#endif\n')
 
+
     return bonds, constraints, dihedrals
+
+
+def get_bond_fc(sequence, index1, index2, k_std):
+    prev_beads = 0
+    for FRG in sequence:
+        if (index1 - fragments_lengths[FRG] and index2 - fragments_lengths[FRG]) > prev_beads - 1:
+            prev_beads += fragments_lengths[FRG]
+        elif index1 < prev_beads and index2 == prev_beads:  # bond between fragments, suppose that always i1 < i2
+            return k_std
+        else:
+            if [index1 - prev_beads, index2 - prev_beads] in fragments_connections[FRG]:
+                dict_index = fragments_connections[FRG].index([index1 - prev_beads, index2 - prev_beads])
+                k = fragments_bond_fc[FRG][dict_index]
+                if k < k_std:  # replace with standard fc, if too low
+                    return k_std
+                else:
+                    return k  # fc from itp file
+            else:
+                return k_std  # constraint
 
 
 def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
@@ -665,7 +686,7 @@ def write_dihedrals(itp, dihedrals, coords0):
                                                                  angle, k))
 
 
-def write_virtual_sites(itp, virtual_sites, beads):
+def write_virtual_sites(itp, virtual_sites, beads, A_cg):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -702,16 +723,47 @@ def write_virtual_sites(itp, virtual_sites, beads):
 
     itp.write('\n[exclusions]\n')
 
-    done = []
+    # done = []
+    #
+    # # Add exclusions between vs and all other beads
+    # for vs in vs_iter:
+    #     excl = str(vs + 1)
+    #     for i in range(len(beads)):
+    #         if i != vs and i not in done:
+    #             excl += ' ' + str(i + 1)
+    #     done.append(vs)
+    #     itp.write('{}\n'.format(excl))
 
-    # Add exclusions between vs and all other beads
+    def find_bond_partners(matrix, index, order=1):
+        if order < 1:
+            return []
+        elif order == 1:
+            return np.nonzero(matrix[index])[0].tolist()
+        else:
+            partners = find_bond_partners(matrix, index, order=1)
+            for _ in range(order - 1):
+                new_partners = []
+                for partner in partners:
+                    new_partners.extend(find_bond_partners(matrix, partner, order=1))
+                partners.extend(new_partners)
+            partners = list(set(partners))
+            if index in partners:
+                partners.remove(index)
+            return partners
+
+    constr_neighb = 1
+
     for vs in vs_iter:
-        excl = str(vs + 1)
-        for i in range(len(beads)):
-            if i != vs and i not in done:
-                excl += ' ' + str(i + 1)
-        done.append(vs)
-        itp.write('{}\n'.format(excl))
+        excl = set()
+
+        constr = set(vs_iter[vs].keys())
+        excl.update(constr)
+
+        for cs in constr:
+            excl.update(find_bond_partners(A_cg, cs, constr_neighb))
+
+        excl = {x + 1 for x in excl}
+        itp.write(str(vs + 1) + ' ' + ' '.join(map(str, excl)) + '\n')
 
 
 def ring_bonding(real, dihedrals):
@@ -1017,7 +1069,7 @@ def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
     virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
     masses = get_standard_masses(bead_types, virtual)
     write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs_generated, virtual, real,
-              masses, resnames[i], map_type, f'{cg_path}/{itp_list[i]}', itp_list[i][:-4], i)
+              masses, resnames[i], map_type, f'{cg_path}/{itp_list[i]}', itp_list[i][:-4], i, sequences[i])
 
 
 def replace_first_line(file, info):
