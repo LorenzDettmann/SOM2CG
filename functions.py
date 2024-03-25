@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 __licence__ = "MIT"
 
 import os
@@ -310,7 +310,10 @@ def add_at_first(indices, first_add):
 def add_at_last(indices, last_add, frg):
     # add indices into last bead of fragment
     # index of bead, in which last atom should be added
-    index = get_largest_index(fragments_connections[frg])  # add this to function input
+    if frg in FRG_same:
+        index = 0  # add to first bead
+    else:
+        index = get_largest_index(fragments_connections[frg])  # add this to function input
     indices_add = []
     indices_add += indices[index]
     no_of_atoms = get_largest_index(indices)
@@ -531,7 +534,8 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
-        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type, sequence)
+        bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type,
+                                                    sequence)
         write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
@@ -592,7 +596,6 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequ
         for con, r in zip(constraints, con_rs):
             itp.write('{:5d}{:3d}{:5d}{:10.3f}\n'.format(con[0] + 1, con[1] + 1, 1, r))
         itp.write('#endif\n')
-
 
     return bonds, constraints, dihedrals
 
@@ -723,17 +726,6 @@ def write_virtual_sites(itp, virtual_sites, beads, A_cg):
 
     itp.write('\n[exclusions]\n')
 
-    # done = []
-    #
-    # # Add exclusions between vs and all other beads
-    # for vs in vs_iter:
-    #     excl = str(vs + 1)
-    #     for i in range(len(beads)):
-    #         if i != vs and i not in done:
-    #             excl += ' ' + str(i + 1)
-    #     done.append(vs)
-    #     itp.write('{}\n'.format(excl))
-
     def find_bond_partners(matrix, index, order=1):
         if order < 1:
             return []
@@ -751,16 +743,25 @@ def write_virtual_sites(itp, virtual_sites, beads, A_cg):
                 partners.remove(index)
             return partners
 
-    constr_neighb = 1
-
     for vs in vs_iter:
         excl = set()
 
         constr = set(vs_iter[vs].keys())
         excl.update(constr)
 
-        for cs in constr:
-            excl.update(find_bond_partners(A_cg, cs, constr_neighb))
+        # here, we add exclusions for the virtual particles for the fragments HS12(p) and HS34(p)
+        # this code only works with the current definition of the virtual sites
+        if vs - 2 in vs_iter.keys():
+            excl.add(vs - 2)
+            for cs in constr:
+                excl.update(find_bond_partners(A_cg, cs, constr_neighb=1))
+        elif vs + 1 in vs_iter.keys():
+            excl.add(vs + 1)
+            for cs in constr:
+                excl.update(find_bond_partners(A_cg, cs, constr_neighb=1))
+        else:
+            for cs in constr:
+                excl.update(find_bond_partners(A_cg, cs, constr_neighb=0))
 
         excl = {x + 1 for x in excl}
         itp.write(str(vs + 1) + ' ' + ' '.join(map(str, excl)) + '\n')
