@@ -754,14 +754,15 @@ def write_virtual_sites(itp, virtual_sites, beads, A_cg):
         if vs - 2 in vs_iter.keys():
             excl.add(vs - 2)
             for cs in constr:
-                excl.update(find_bond_partners(A_cg, cs, constr_neighb=1))
+                # last number denotes order of bonded neighbors of the constructing particles
+                excl.update(find_bond_partners(A_cg, cs, 1))
         elif vs + 1 in vs_iter.keys():
             excl.add(vs + 1)
             for cs in constr:
-                excl.update(find_bond_partners(A_cg, cs, constr_neighb=1))
+                excl.update(find_bond_partners(A_cg, cs, 1))
         else:
             for cs in constr:
-                excl.update(find_bond_partners(A_cg, cs, constr_neighb=0))
+                excl.update(find_bond_partners(A_cg, cs, 0))
 
         excl = {x + 1 for x in excl}
         itp.write(str(vs + 1) + ' ' + ' '.join(map(str, excl)) + '\n')
