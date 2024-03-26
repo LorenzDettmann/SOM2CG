@@ -50,6 +50,7 @@ import MDAnalysis as mda
 from MDAnalysis import transformations
 import math
 from dictionaries import *
+import itertools
 
 
 # read itp files
@@ -536,11 +537,11 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type,
                                                     sequence)
-        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type)
+        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence)
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0)
         if virtual:
-            write_virtual_sites(itp, virtual, beads, A_cg)
+            write_virtual_sites(itp, virtual, A_cg)
 
     add_info(itp_name)
 
@@ -603,30 +604,28 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequ
 def get_bond_fc(sequence, index1, index2, k_std):
     prev_beads = 0
     for FRG in sequence:
-        if (index1 - fragments_lengths[FRG] and index2 - fragments_lengths[FRG]) > prev_beads - 1:
+        if all(index - fragments_lengths[FRG] > prev_beads - 1 for index in [index1, index2]):
             prev_beads += fragments_lengths[FRG]
         elif index1 < prev_beads and index2 == prev_beads:  # bond between fragments, suppose that always i1 < i2
             return k_std
         else:
-            if [index1 - prev_beads, index2 - prev_beads] in fragments_connections[FRG]:
-                dict_index = fragments_connections[FRG].index([index1 - prev_beads, index2 - prev_beads])
+            indices = [index - prev_beads for index in [index1, index2]]
+            if indices in fragments_connections[FRG]:
+                dict_index = fragments_connections[FRG].index(indices)
                 k = fragments_bond_fc[FRG][dict_index]
-                if k < k_std:  # replace with standard fc, if too low
-                    return k_std
-                else:
-                    return k  # fc from itp file
+                return k if k >= k_std else k_std  # replace with standard fc, if too low
             else:
                 return k_std  # constraint
 
 
-def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
+def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
     Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
-    k = 250.0
+    k_std = 250.0
 
     # Get list of angles
     angles = []
@@ -658,7 +657,33 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type):
         thetas = thetas * 180.0 / (np.pi * n_confs)
 
         for a, t in zip(angles, thetas):
+            k = get_angle_fc(sequence, a[0], a[1], a[2], k_std)
             itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, 2, t, k))
+
+
+def get_angle_fc(sequence, index1, index2, index3, k_std):
+    prev_beads = 0
+    for FRG in sequence:
+        if all(index - fragments_lengths[FRG] > prev_beads - 1 for index in [index1, index2, index3]):
+            prev_beads += fragments_lengths[FRG]
+        elif not all(prev_beads - 1 < index <= prev_beads - 1 + fragments_lengths[FRG]
+                     for index in [index1, index2, index3]):  # angle between fragments
+            return k_std
+        else:
+            indices = tuple([index - prev_beads for index in [index1, index2, index3]])
+            if indices in fragments_angles_fc[FRG].keys():
+                k = fragments_angles_fc[FRG][indices]
+                return k
+            else:
+                # try with mirrored indices
+                mirrored_indices = tuple(reversed([index - prev_beads for index in [index1, index2, index3]]))
+                if mirrored_indices in fragments_angles_fc[FRG].keys():
+                    k = fragments_angles_fc[FRG][mirrored_indices]
+                    return k
+                else:
+                    print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
+                          f"not found for {FRG}.")
+                    return k_std
 
 
 def write_dihedrals(itp, dihedrals, coords0):
@@ -689,7 +714,7 @@ def write_dihedrals(itp, dihedrals, coords0):
                                                                  angle, k))
 
 
-def write_virtual_sites(itp, virtual_sites, beads, A_cg):
+def write_virtual_sites(itp, virtual_sites, A_cg):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
