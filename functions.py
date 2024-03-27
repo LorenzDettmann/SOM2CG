@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 __licence__ = "MIT"
 
 import os
@@ -520,7 +520,7 @@ def get_coords(mol, beads, map_type, min_energy_idx):
     return np.array(cg_coords)
 
 
-def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, excls,
+def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, excls, gen_fc,
               masses, resname_list, map_type, itp_name, name, i, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
@@ -540,17 +540,17 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
         bonds, constraints, dihedrals = write_bonds(itp, A_cg, ring_beads, beads, real, mol, n_confs, map_type,
-                                                    sequence)
-        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence)
+                                                    sequence, gen_fc)
+        write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence, gen_fc)
         if dihedrals:
-            write_dihedrals(itp, dihedrals, coords0, sequence)
+            write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc)
         if virtual:
             write_virtual_sites(itp, virtual, A_cg, excls)
 
     add_info(itp_name)
 
 
-def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequence):
+def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequence, gen_fc):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -586,7 +586,10 @@ def write_bonds(itp, A_cg, ring_atoms, beads, real, mol, n_confs, map_type, sequ
                 con_rs.append(r)
                 break
         if not share_ring:
-            k = get_bond_fc(sequence, bond[0], bond[1], k_std)
+            if gen_fc == 'no':
+                k = get_bond_fc(sequence, bond[0], bond[1], k_std)
+            else:
+                k = k_std
             itp.write('{:5d}{:3d}{:5d}{:10.3f}{:10.2f}\n'.format(bond[0] + 1, bond[1] + 1, 1, r, k))
 
     # Write constraints
@@ -625,7 +628,7 @@ def get_bond_fc(sequence, index1, index2, k_std):
                 return k_std
 
 
-def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence):
+def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence, gen_fc):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -665,7 +668,10 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
 
         thetas = thetas * 180.0 / (np.pi * n_confs)
         for a, t in zip(angles, thetas):
-            k = get_angle_fc(sequence, a[0], a[1], a[2], k_std, k_min, k_max)
+            if gen_fc == 'no':
+                k = get_angle_fc(sequence, a[0], a[1], a[2], k_std, k_min, k_max)
+            else:
+                k = k_std
             itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, 2, t, k))
 
 
@@ -694,7 +700,7 @@ def get_angle_fc(sequence, index1, index2, index3, k_std, k_min, k_max):
                     return k_std
 
 
-def write_dihedrals(itp, dihedrals, coords0, sequence):
+def write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -717,7 +723,10 @@ def write_dihedrals(itp, dihedrals, coords0, sequence):
         cross2 = np.cross(vec2, vec3)
         cross2 = cross2 / np.linalg.norm(cross2)
         angle = np.arccos(np.dot(cross1, cross2)) * 180.0 / np.pi
-        k = get_dihedral_angle_fc(sequence, dih[0], dih[1], dih[2], dih[3], k_std)
+        if gen_fc == 'no':
+            k = get_dihedral_angle_fc(sequence, dih[0], dih[1], dih[2], dih[3], k_std)
+        else:
+            k = k_std
         itp.write(
             '{:5d}{:3d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(dih[0] + 1, dih[1] + 1, dih[2] + 1, dih[3] + 1, 2,
                                                                  angle, k))
@@ -1068,7 +1077,7 @@ HS in water\n
 
 
 def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
-                n_confs, map_type, cg_path, itp_list):
+                n_confs, map_type, gen_fc, cg_path, itp_list):
     mol = create_macromolecule(sequences[i], first_atoms[i], last_atoms[i])
     ring_atoms = get_ring_atoms(mol)
     A_cg = create_A_matrix(sequences[i], fragments_connections, fragments_lengths, FRG_same)
@@ -1085,7 +1094,7 @@ def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
     virtual, real, excls = get_virtual_sites_and_excl(sequences[i], fragments_vs, fragments_lengths, ring_beads)
     masses = get_standard_masses(bead_types, virtual)
     write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs_generated, virtual, real, excls,
-              masses, resnames[i], map_type, f'{cg_path}/{itp_list[i]}', itp_list[i][:-4], i, sequences[i])
+              gen_fc, masses, resnames[i], map_type, f'{cg_path}/{itp_list[i]}', itp_list[i][:-4], i, sequences[i])
 
 
 def replace_first_line(file, info):

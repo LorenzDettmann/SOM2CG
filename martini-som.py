@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 __licence__ = "MIT"
 
 import os
@@ -78,6 +78,8 @@ def main():
                         help='Apply center of geometry (cog) or center of mass (com) mapping')
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
                         help='Parametrize the molecules, or only output the mapped structure file')
+    parser.add_argument('-use_std_fc', default='no', choices=['yes', 'no'],
+                        help='Use standard force constants for all interactions')
     parser.add_argument('-with_progress_bar', default='yes', choices=['yes', 'no'],
                         help='Activates a progress bar, could be turned off when redirecting the output into a file')
 
@@ -90,6 +92,7 @@ def main():
     par = args.parametrize
     n_confs = args.n_confs
     num_threads = args.nt
+    gen_fc = args.use_std_fc
     progress_bar = args.with_progress_bar
 
     check_arguments(path, cg_path)
@@ -113,7 +116,7 @@ def main():
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(parametrize, i, sequences, mapping, resnames,
-                                       first_atoms, last_atoms, n_confs, map_type, cg_path, itp_list) for i in
+                                       first_atoms, last_atoms, n_confs, map_type, gen_fc, cg_path, itp_list) for i in
                        range(len(sequences))]
             # progress bar
             if progress_bar == 'yes':
