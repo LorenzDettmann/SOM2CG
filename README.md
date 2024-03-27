@@ -18,7 +18,14 @@ git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
 You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths
 using the following arguments:
 ```bash
-python3 martini_som.py [-V] [-h] [-nt 'number of threads'] [-input_dir 'input directory'] [-output_dir 'output directory'] [-n_confs 'number of conformers'] [-map '"cog" or "com" mapping'] [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
+python3 martini_som.py [-V] [-h] [-nt 'number of threads'] 
+                       [-input_dir 'input directory'] 
+                       [-output_dir 'output directory'] 
+                       [-n_confs 'number of conformers'] 
+                       [-map '"cog" or "com" mapping'] 
+                       [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
+                       [-use_std_fc '(yes/no) use standard force constants']
+                       [-with_progress_bar '(yes/no) activate a progress bar']
 ```
 
 ## Contributing
