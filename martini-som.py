@@ -79,7 +79,7 @@ def main():
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
                         help='Parametrize the molecules, or only output the mapped structure file')
     parser.add_argument('-use_std_fc', default='no', choices=['yes', 'no'],
-                        help='Use standard force constants for all interactions')
+                        help='Use standard force constants for all bonded interactions')
     parser.add_argument('-with_progress_bar', default='yes', choices=['yes', 'no'],
                         help='Activates a progress bar, could be turned off when redirecting the output into a file')
 
