@@ -48,8 +48,8 @@ __licence__ = "MIT"
 import os
 import argparse
 import warnings
-from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 from functions import (positive_integer, check_arguments, read_itps, create_vsomm_list, back_translation,
                        create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file)
 from dictionaries import fragments_mapping, fragments_lengths
@@ -105,10 +105,10 @@ def main():
     for i, sequence in enumerate(sequences):
         vsomm_list = create_vsomm_list(sequence, first_add[i], last_add[i], first_atoms[i], last_atoms[i])
         vsomm_lists.append(vsomm_list)
-        beads = back_translation(create_mapping_vsomm(sequences[i], fragments_mapping, first_add[i], last_add[i]),
+        beads = back_translation(create_mapping_vsomm(sequence, fragments_mapping, first_add[i], last_add[i]),
                                  vsomm_lists[i])
         mapping.append(beads)
-        resname_list = create_resname_list(sequences[i], fragments_lengths)
+        resname_list = create_resname_list(sequence, fragments_lengths)
         resnames.append(resname_list)
 
     if par == 'yes':

@@ -44,11 +44,11 @@ __licence__ = "MIT"
 
 import os
 import argparse
+import math
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-import math
 from dictionaries import *
 
 
@@ -115,8 +115,7 @@ def read_itps(path, gro):
             last_atoms.append('H')
             last_add.append(1)
         elif u1.atoms[-1].type == 'CH3':
-            if (u1.atoms[-1].name == 'C3' or u1.atoms[-1].name == 'C4' or u1.atoms[-1].name == 'C13'
-                    or u1.atoms[-1].name == 'CD2'):
+            if u1.atoms[-1].name in ('C3', 'C4', 'C13', 'CD2'):
                 last_atoms.append('H')
                 last_add.append(0)
             else:
@@ -182,8 +181,7 @@ def get_last(frg):
     def find_max_in_array(array):
         if isinstance(array, np.ndarray):
             return np.max(array)
-        else:
-            return array
+        return array
 
     # get index of last heavy atom before a brach
     index = np.argmax([find_max_in_array(element) for element in fragments_vsomm_indices[frg]])
@@ -233,7 +231,7 @@ def translate_mapping(mapping, vsomm_list):
     translation = []
     for i in mapping:
         new_ind = vsomm_list[i]
-        if isinstance(new_ind, list) or isinstance(new_ind, np.ndarray):
+        if isinstance(new_ind, (list, np.ndarray)):
             for j in new_ind:
                 translation.append(j)
         else:
@@ -245,7 +243,7 @@ def get_largest_index(input_list):
     # returns the largest index in a list (of lists)
     max_value = 0
     for element in input_list:
-        if isinstance(element, list) or isinstance(element, np.ndarray):
+        if isinstance(element, (list, np.ndarray)):
             max_value = max(max_value, get_largest_index(element))
         else:
             max_value = max(max_value, element)
@@ -256,19 +254,17 @@ def get_largest_index(input_list):
 def return_index(vsomm_list, atom_of_interest):
     # returns index of atom in list (even, if atom of interest is incorporated in list of list)
     for i, atom in enumerate(vsomm_list):
-        if isinstance(atom, list) or isinstance(atom, np.ndarray):
+        if isinstance(atom, (list, np.ndarray)):
             for sub_atom in atom:
                 if sub_atom == atom_of_interest:
                     index = i
                     return index
-                else:
-                    continue
+                continue
         else:
             if atom == atom_of_interest:
                 index = i
                 return index
-            else:
-                continue
+            continue
     raise ValueError('Index not found')
 
 
@@ -426,7 +422,7 @@ def increase_indices(dct, increase):
     return mod
 
 
-def get_virtual_sites_and_excl(sequence, fragments_vs, fragmens_lengths, ring_beads):
+def get_virtual_sites_and_excl(sequence, fragments_vs, fragments_lengths, ring_beads):
     real = []
     virtual = {}
     excls = []
@@ -533,9 +529,9 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         itp.write(f'{name}    1\n')
         # write atoms section
         itp.write('\n[atoms]\n')
-        for b in range(len(bead_types)):
+        for b, bead_type in enumerate(bead_types):
             itp.write(
-                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_types[b], 1 + i,
+                '{:5d}{:>6}{:5d}{:>6}{:>6}{:5d}{:>10.3f}{:>10.3f}\n'.format(b + 1, bead_type, 1 + i,
                                                                             resname_list[b],
                                                                             'CG' + str(b + 1), b + 1, charges[b],
                                                                             masses[b]))
@@ -545,7 +541,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc)
         if virtual:
-            write_virtual_sites(itp, virtual, A_cg, excls)
+            write_virtual_sites(itp, virtual, excls)
 
     add_info(itp_name)
 
@@ -622,10 +618,8 @@ def get_bond_fc(sequence, index1, index2, k_std):
                 k = fragments_bond_fc[FRG][dict_index]
                 if not k:  # None value
                     return k_std
-                else:
-                    return k if k >= k_std else k_std  # replace with standard fc, if too low
-            else:
-                return k_std
+                return k if k >= k_std else k_std  # replace with standard fc, if too low
+            return k_std
 
 
 def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence, gen_fc):
@@ -637,7 +631,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
     # Writes [angles] block in itp file
     k_min = 25.0
     k_std = 250.0
-    k_max = 500.0
+    k_max = 350.0
 
     # Get list of angles
     angles = []
@@ -694,10 +688,9 @@ def get_angle_fc(sequence, index1, index2, index3, k_std, k_min, k_max):
                 if mirrored_indices in fragments_angles_fc[FRG].keys():
                     k = fragments_angles_fc[FRG][mirrored_indices]
                     return max(k_min, min(k, k_max))
-                else:
-                    print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
-                          f"not found for {FRG}.")
-                    return k_std
+                print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
+                      f"not found for {FRG}.")
+                return k_std
 
 
 def write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc):
@@ -712,16 +705,11 @@ def write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc):
     k_std = 500.0
 
     for dih in dihedrals:
-        vec1 = np.subtract(coords0[dih[1]], coords0[dih[0]])
-        vec2 = np.subtract(coords0[dih[2]], coords0[dih[1]])
-        vec3 = np.subtract(coords0[dih[3]], coords0[dih[2]])
-        vec1 = vec1 / np.linalg.norm(vec1)
-        vec2 = vec2 / np.linalg.norm(vec2)
-        vec3 = vec3 / np.linalg.norm(vec3)
-        cross1 = np.cross(vec1, vec2)
-        cross1 = cross1 / np.linalg.norm(cross1)
-        cross2 = np.cross(vec2, vec3)
-        cross2 = cross2 / np.linalg.norm(cross2)
+        vec1, vec2, vec3 = [
+            (coords0[dih[i + 1]] - coords0[dih[i]]) / np.linalg.norm(coords0[dih[i + 1]] - coords0[dih[i]]) for i in
+            range(3)]
+        cross1, cross2 = [np.cross(vec1, vec2) / np.linalg.norm(np.cross(vec1, vec2)) for vec1, vec2 in
+                          [(vec1, vec2), (vec2, vec3)]]
         angle = np.arccos(np.dot(cross1, cross2)) * 180.0 / np.pi
         if gen_fc == 'no':
             k = get_dihedral_angle_fc(sequence, dih[0], dih[1], dih[2], dih[3], k_std)
@@ -750,7 +738,7 @@ def get_dihedral_angle_fc(sequence, index1, index2, index3, index4, k_std):
             return k_std
 
 
-def write_virtual_sites(itp, virtual_sites, A_cg, excls):
+def write_virtual_sites(itp, virtual_sites, excls):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -949,14 +937,14 @@ def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
     # create the mapped structure (without ions) based on the unwrapped atomistic structure
     # wrapping at the end
     n_beads = 0  # get total number of beads
-    for i, file in enumerate(itp_list):
+    for i in range(len(itp_list)):
         n_beads += len(mapping[i])
     n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
                            residue_segindex=np.zeros(n_beads))
     coords = []
     prev_atoms = 0
-    for i, mol in enumerate(sequences):
-        for j, bead in enumerate(mapping[i]):
+    for i in range(len(sequences)):
+        for bead in mapping[i]:
             vsomm_indices = translate_mapping(bead, vsomm_lists[i])
             a = u.atoms[np.add(vsomm_indices, prev_atoms - 1)]
             if map_type == 'com':
@@ -989,8 +977,8 @@ def add_residue_info(u, mapped, sequences, mapping, resnames):
     # add resids, resnames and names
     resids = []
     names_gro = []
-    for i, mol in enumerate(sequences):
-        for j, bead in enumerate(mapping[i]):
+    for i in range(len(sequences)):
+        for j in range(len(mapping[i])):
             resids.append(i + 1)
             names_gro.append(f"CG{j + 1}")
 
@@ -1025,8 +1013,8 @@ def write_water_file(cg_path, u):
    1.00000   1.00000   1.00000"""
     file = "water.gro"
     if not os.path.exists(f"{cg_path}/{file}"):
-        f = open(f"{cg_path}/{file}", "w")
-        f.write(water_gro)
+        with open(f"{cg_path}/{file}", "w") as f:
+            f.write(water_gro)
 
     # number of coarse-grained water molecules
     N = round(len(u.select_atoms('name OW')) / 4)
