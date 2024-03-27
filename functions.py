@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 __licence__ = "MIT"
 
 import os
@@ -50,7 +50,6 @@ import MDAnalysis as mda
 from MDAnalysis import transformations
 import math
 from dictionaries import *
-import itertools
 
 
 # read itp files
@@ -427,14 +426,19 @@ def increase_indices(dct, increase):
     return mod
 
 
-def get_new_virtual_sites(sequence, fragments_vs, fragmens_lengths, ring_beads):
+def get_virtual_sites_and_excl(sequence, fragments_vs, fragmens_lengths, ring_beads):
     real = []
     virtual = {}
+    excls = []
     prev_beads = 0
     for FRG in sequence:
         if fragments_vs[FRG] != {}:
             mod = increase_indices(fragments_vs[FRG], prev_beads)
             virtual.update(mod)
+        if fragments_exclusions[FRG]:
+            for excl in fragments_exclusions[FRG]:
+                mod = np.add(excl, prev_beads)
+                excls.append(list(mod))
         prev_beads += fragments_lengths[FRG]
 
     # filter out vs from real
@@ -444,7 +448,7 @@ def get_new_virtual_sites(sequence, fragments_vs, fragmens_lengths, ring_beads):
             if vs in mod:
                 mod.remove(vs)
         real.append(mod)
-    return virtual, real
+    return virtual, real, excls
 
 
 def get_standard_masses(bead_types, virtual):
@@ -516,7 +520,7 @@ def get_coords(mol, beads, map_type, min_energy_idx):
     return np.array(cg_coords)
 
 
-def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real,
+def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_confs, virtual, real, excls,
               masses, resname_list, map_type, itp_name, name, i, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
@@ -539,9 +543,9 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
                                                     sequence)
         write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence)
         if dihedrals:
-            write_dihedrals(itp, dihedrals, coords0)
+            write_dihedrals(itp, dihedrals, coords0, sequence)
         if virtual:
-            write_virtual_sites(itp, virtual, A_cg)
+            write_virtual_sites(itp, virtual, A_cg, excls)
 
     add_info(itp_name)
 
@@ -613,9 +617,12 @@ def get_bond_fc(sequence, index1, index2, k_std):
             if indices in fragments_connections[FRG]:
                 dict_index = fragments_connections[FRG].index(indices)
                 k = fragments_bond_fc[FRG][dict_index]
-                return k if k >= k_std else k_std  # replace with standard fc, if too low
+                if not k:  # None value
+                    return k_std
+                else:
+                    return k if k >= k_std else k_std  # replace with standard fc, if too low
             else:
-                return k_std  # constraint
+                return k_std
 
 
 def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequence):
@@ -625,7 +632,9 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
     Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
+    k_min = 25.0
     k_std = 250.0
+    k_max = 500.0
 
     # Get list of angles
     angles = []
@@ -655,38 +664,37 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
                 thetas[a] += theta
 
         thetas = thetas * 180.0 / (np.pi * n_confs)
-
         for a, t in zip(angles, thetas):
-            k = get_angle_fc(sequence, a[0], a[1], a[2], k_std)
+            k = get_angle_fc(sequence, a[0], a[1], a[2], k_std, k_min, k_max)
             itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, 2, t, k))
 
 
-def get_angle_fc(sequence, index1, index2, index3, k_std):
+def get_angle_fc(sequence, index1, index2, index3, k_std, k_min, k_max):
     prev_beads = 0
     for FRG in sequence:
         if all(index - fragments_lengths[FRG] > prev_beads - 1 for index in [index1, index2, index3]):
             prev_beads += fragments_lengths[FRG]
         elif not all(prev_beads - 1 < index <= prev_beads - 1 + fragments_lengths[FRG]
-                     for index in [index1, index2, index3]):  # angle between fragments
+                     for index in [index1, index2, index3]):  # angle between different fragments
             return k_std
         else:
             indices = tuple([index - prev_beads for index in [index1, index2, index3]])
             if indices in fragments_angles_fc[FRG].keys():
                 k = fragments_angles_fc[FRG][indices]
-                return k
+                return max(k_min, min(k, k_max))  # restrict fc to be between k_min and k_max
             else:
                 # try with mirrored indices
                 mirrored_indices = tuple(reversed([index - prev_beads for index in [index1, index2, index3]]))
                 if mirrored_indices in fragments_angles_fc[FRG].keys():
                     k = fragments_angles_fc[FRG][mirrored_indices]
-                    return k
+                    return max(k_min, min(k, k_max))
                 else:
                     print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
                           f"not found for {FRG}.")
                     return k_std
 
 
-def write_dihedrals(itp, dihedrals, coords0):
+def write_dihedrals(itp, dihedrals, coords0, sequence):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -695,7 +703,7 @@ def write_dihedrals(itp, dihedrals, coords0):
     # Writes hinge dihedrals to itp file
     # Dihedrals chosen in ring_bonding
     itp.write('\n[dihedrals]\n')
-    k = 500.0
+    k_std = 500.0
 
     for dih in dihedrals:
         vec1 = np.subtract(coords0[dih[1]], coords0[dih[0]])
@@ -709,12 +717,31 @@ def write_dihedrals(itp, dihedrals, coords0):
         cross2 = np.cross(vec2, vec3)
         cross2 = cross2 / np.linalg.norm(cross2)
         angle = np.arccos(np.dot(cross1, cross2)) * 180.0 / np.pi
+        k = get_dihedral_angle_fc(sequence, dih[0], dih[1], dih[2], dih[3], k_std)
         itp.write(
             '{:5d}{:3d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(dih[0] + 1, dih[1] + 1, dih[2] + 1, dih[3] + 1, 2,
                                                                  angle, k))
 
 
-def write_virtual_sites(itp, virtual_sites, A_cg):
+def get_dihedral_angle_fc(sequence, index1, index2, index3, index4, k_std):
+    prev_beads = 0
+    for FRG in sequence:
+        if all(index - fragments_lengths[FRG] > prev_beads - 1 for index in [index1, index2, index3, index4]):
+            prev_beads += fragments_lengths[FRG]
+        else:
+            indices = [index - prev_beads for index in [index1, index2, index3, index4]]
+            if set(indices) == set(list(fragments_dihedral_angles_fc[FRG].keys())[0]):
+                # the following works, because we only have max. one dihedral angle per fragment
+                indices = list(fragments_dihedral_angles_fc[FRG].keys())[0]
+                k = fragments_dihedral_angles_fc[FRG][tuple(indices)]
+                return k
+            # if dihedral angle was not found, return k_std (should not be the case)
+            print(f"Note: Dihedral angle {[index - prev_beads + 1 for index in [index1, index2, index3, index4]]} "
+                  f"not found for {FRG}.")
+            return k_std
+
+
+def write_virtual_sites(itp, virtual_sites, A_cg, excls):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -750,47 +777,9 @@ def write_virtual_sites(itp, virtual_sites, A_cg):
             itp.write('{:5d}{:3d}{:3d}{:5d}{:7.3f}\n'.format(vs + 1, cs[0][0] + 1, cs[1][0] + 1, 1, cs[0][1]))
 
     itp.write('\n[exclusions]\n')
-
-    def find_bond_partners(matrix, index, order=1):
-        if order < 1:
-            return []
-        elif order == 1:
-            return np.nonzero(matrix[index])[0].tolist()
-        else:
-            partners = find_bond_partners(matrix, index, order=1)
-            for _ in range(order - 1):
-                new_partners = []
-                for partner in partners:
-                    new_partners.extend(find_bond_partners(matrix, partner, order=1))
-                partners.extend(new_partners)
-            partners = list(set(partners))
-            if index in partners:
-                partners.remove(index)
-            return partners
-
-    for vs in vs_iter:
-        excl = set()
-
-        constr = set(vs_iter[vs].keys())
-        excl.update(constr)
-
-        # here, we add exclusions for the virtual particles for the fragments HS12(p) and HS34(p)
-        # this code only works with the current definition of the virtual sites
-        if vs - 2 in vs_iter.keys():
-            excl.add(vs - 2)
-            for cs in constr:
-                # last number denotes order of bonded neighbors of the constructing particles
-                excl.update(find_bond_partners(A_cg, cs, 1))
-        elif vs + 1 in vs_iter.keys():
-            excl.add(vs + 1)
-            for cs in constr:
-                excl.update(find_bond_partners(A_cg, cs, 1))
-        else:
-            for cs in constr:
-                excl.update(find_bond_partners(A_cg, cs, 0))
-
-        excl = {x + 1 for x in excl}
-        itp.write(str(vs + 1) + ' ' + ' '.join(map(str, excl)) + '\n')
+    for excl in excls:
+        format_string = '{:5d} ' + ' '.join(['{:3d}'] * (len(excl) - 1))
+        itp.write(format_string.format(*excl) + '\n')
 
 
 def ring_bonding(real, dihedrals):
@@ -1093,9 +1082,9 @@ def parametrize(i, sequences, mapping, resnames, first_atoms, last_atoms,
     energy_list = AllChem.UFFOptimizeMoleculeConfs(mol, maxIters=1000)
     min_energy_idx = min(range(len(energy_list)), key=energy_list.__getitem__)
     coords0 = get_coords(mol, mapping[i], map_type, min_energy_idx)  # coordinates of energy minimized molecules
-    virtual, real = get_new_virtual_sites(sequences[i], fragments_vs, fragments_lengths, ring_beads)
+    virtual, real, excls = get_virtual_sites_and_excl(sequences[i], fragments_vs, fragments_lengths, ring_beads)
     masses = get_standard_masses(bead_types, virtual)
-    write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs_generated, virtual, real,
+    write_itp(bead_types, coords0, charges, A_cg, ring_beads, mapping[i], mol, n_confs_generated, virtual, real, excls,
               masses, resnames[i], map_type, f'{cg_path}/{itp_list[i]}', itp_list[i][:-4], i, sequences[i])
 
 
