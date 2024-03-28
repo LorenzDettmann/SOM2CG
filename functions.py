@@ -541,7 +541,9 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
         if dihedrals:
             write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc)
         if virtual:
-            write_virtual_sites(itp, virtual, excls)
+            write_virtual_sites(itp, virtual)
+        if excls:
+            write_excls(itp, excls)
 
     add_info(itp_name)
 
@@ -631,7 +633,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
     # Writes [angles] block in itp file
     k_min = 25.0
     k_std = 250.0
-    k_max = 350.0
+    k_max = 350.0  # Swarm-CG parameters were already restricted
 
     # Get list of angles
     angles = []
@@ -738,7 +740,7 @@ def get_dihedral_angle_fc(sequence, index1, index2, index3, index4, k_std):
             return k_std
 
 
-def write_virtual_sites(itp, virtual_sites, excls):
+def write_virtual_sites(itp, virtual_sites):
     """
     This function is based on the work of Mark A. Miller and coworkers.
     Modifications were made for this project.
@@ -773,6 +775,8 @@ def write_virtual_sites(itp, virtual_sites, excls):
         elif len(cs) == 2:
             itp.write('{:5d}{:3d}{:3d}{:5d}{:7.3f}\n'.format(vs + 1, cs[0][0] + 1, cs[1][0] + 1, 1, cs[0][1]))
 
+
+def write_excls(itp, excls):
     itp.write('\n[exclusions]\n')
     for excl in excls:
         format_string = '{:5d} ' + ' '.join(['{:3d}'] * (len(excl) - 1))
