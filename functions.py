@@ -372,16 +372,11 @@ def change_first_and_last_bead(resname_list, bead_types, first_atom, last_atom):
         if first_atom in fragments_modify_first[resname_list[0]].keys():
             bead_types[fragments_modify_first[resname_list[0]]['pos']] = fragments_modify_first[resname_list[0]][
                 first_atom]
-        else:
-            pass
-
     # same for last bead
     if resname_list[-1] in fragments_modify_last.keys():
         if last_atom in fragments_modify_last[resname_list[-1]].keys():
             bead_types[fragments_modify_last[resname_list[-1]]['pos']] = fragments_modify_last[resname_list[-1]][
                 last_atom]
-        else:
-            pass
 
 
 def determine_bead_types(sequence, fragments_bead_types):
@@ -655,10 +650,8 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
             for i, bead in enumerate(beads):
                 coords[i] = bead_coords(bead, conf, mol, map_type)
             for a, angle in enumerate(angles):
-                vec1 = np.subtract(coords[angle[0]], coords[angle[1]])
-                vec1 = vec1 / np.linalg.norm(vec1)
-                vec2 = np.subtract(coords[angle[2]], coords[angle[1]])
-                vec2 = vec2 / np.linalg.norm(vec2)
+                vec1 = (coords[angle[0]] - coords[angle[1]]) / np.linalg.norm(coords[angle[0]] - coords[angle[1]])
+                vec2 = (coords[angle[2]] - coords[angle[1]]) / np.linalg.norm(coords[angle[2]] - coords[angle[1]])
                 theta = np.arccos(np.dot(vec1, vec2))
                 thetas[a] += theta
 
@@ -680,19 +673,20 @@ def get_angle_fc(sequence, index1, index2, index3, k_std, k_min, k_max):
                      for index in [index1, index2, index3]):  # angle between different fragments
             return k_std
         else:
-            indices = tuple([index - prev_beads for index in [index1, index2, index3]])
+            indices = tuple(index - prev_beads for index in [index1, index2, index3])
             if indices in fragments_angles_fc[FRG].keys():
                 k = fragments_angles_fc[FRG][indices]
-                return max(k_min, min(k, k_max))  # restrict fc to be between k_min and k_max
-            else:
-                # try with mirrored indices
-                mirrored_indices = tuple(reversed([index - prev_beads for index in [index1, index2, index3]]))
-                if mirrored_indices in fragments_angles_fc[FRG].keys():
-                    k = fragments_angles_fc[FRG][mirrored_indices]
-                    return max(k_min, min(k, k_max))
-                print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
-                      f"not found for {FRG}.")
-                return k_std
+                # restrict fc to be between k_min and k_max
+                return max(k_min, min(k, k_max))
+
+            # try with mirrored indices
+            mirrored_indices = tuple(reversed([index - prev_beads for index in [index1, index2, index3]]))
+            if mirrored_indices in fragments_angles_fc[FRG].keys():
+                k = fragments_angles_fc[FRG][mirrored_indices]
+                return max(k_min, min(k, k_max))
+            print(f"Note: Angle {[index - prev_beads + 1 for index in [index1, index2, index3]]} "
+                  f"not found for {FRG}.")
+            return k_std
 
 
 def write_dihedrals(itp, dihedrals, coords0, sequence, gen_fc):
@@ -794,7 +788,7 @@ def ring_bonding(real, dihedrals):
     j = len(real) - 1
     k = 1
     struts = 0
-    for s in range(int(math.ceil(n_struts / 2.0))):
+    for _ in range(int(math.ceil(n_struts / 2.0))):
         struts += 1
         i = (j + 1) % len(real)  # First one loops round to 0
         l = k + 1
@@ -887,7 +881,7 @@ def positive_integer(value):
     int_value = int(value)
     if int_value <= 0:
         raise argparse.ArgumentTypeError(
-            f"This number must be an integer greater than 0.")
+            "This number must be an integer greater than 0.")
     return int_value
 
 
@@ -918,33 +912,32 @@ def unwrapped_atomistic_structure(path, gro, itp_list):
     # unwraps the atomistic structure to correctly generate the mapped structure
     # to unwrap, the atomistic bonds have to be read and added
     # load atomistic coordinates
-    u = mda.Universe(f'{gro}')
+    u_full = mda.Universe(f'{gro}')
     # add bonds from itp files
-    n = 0
+    n_atoms = 0
     for i, file in enumerate(itp_list):
-        u1 = mda.Universe(f'{path}/{file}', topology_format='ITP')
+        u_itp = mda.Universe(f'{path}/{file}', topology_format='ITP')
         if i == 0:
-            bonds = u1.bonds.indices
-            n += len(u1.atoms)
+            bonds = u_itp.bonds.indices
         else:
-            bonds = np.concatenate((bonds, np.add(u1.bonds.indices, n)))
-            n += len(u1.atoms)
-    u.add_TopologyAttr('bonds', bonds)
+            bonds = np.concatenate((bonds, np.add(u_itp.bonds.indices, n_atoms)))
+        n_atoms += len(u_itp.atoms)
+    u_full.add_TopologyAttr('bonds', bonds)
     # unwrap
-    workflow = [transformations.unwrap(u.atoms)]
-    u.trajectory.add_transformations(*workflow)
+    workflow = [transformations.unwrap(u_full.atoms)]
+    u_full.trajectory.add_transformations(*workflow)
 
-    return u
+    return u_full
 
 
 def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
-    # create the mapped structure (without ions) based on the unwrapped atomistic structure
-    # wrapping at the end
-    n_beads = 0  # get total number of beads
-    for i in range(len(itp_list)):
-        n_beads += len(mapping[i])
-    n = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
-                           residue_segindex=np.zeros(n_beads))
+    """
+    create the mapped structure (without ions) based on the unwrapped atomistic structure and wrap it at the end
+    """
+    # get total number of beads
+    n_beads = sum(len(mapping[i]) for i in range(len(itp_list)))
+    u_mapped = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
+                                  residue_segindex=np.zeros(n_beads))
     coords = []
     prev_atoms = 0
     for i in range(len(sequences)):
@@ -957,20 +950,20 @@ def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
                 coords.append(a.center_of_geometry())
 
         prev_atoms += get_largest_index(vsomm_lists[i])
-    n.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
+    u_mapped.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
     # set box size to that of the atomistic frame
-    n.dimensions = u.dimensions
+    u_mapped.dimensions = u.dimensions
     # wrap molecules
-    workflow = [transformations.wrap(n.atoms)]
-    n.trajectory.add_transformations(*workflow)
+    workflow = [transformations.wrap(u_mapped.atoms)]
+    u_mapped.trajectory.add_transformations(*workflow)
 
     # add ions
     ions = u.select_atoms("resname CA2+ or resname NA+")
     if len(ions) > 0:
         # merge with calcium ions
-        merged = mda.Merge(n.select_atoms("all"), ions)
+        merged = mda.Merge(u_mapped.select_atoms("all"), ions)
     else:
-        merged = n
+        merged = u_mapped
     # add dimensions
     merged.dimensions = u.dimensions
 
