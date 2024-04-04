@@ -521,7 +521,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
     # writes gromacs topology file
     with open(itp_name, 'w') as itp:
         itp.write('[moleculetype]\n')
-        itp.write(f'{name}    1\n')
+        itp.write(f'{name}    2\n')
         # write atoms section
         itp.write('\n[atoms]\n')
         for b, bead_type in enumerate(bead_types):
