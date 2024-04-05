@@ -626,7 +626,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
     Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
-    k_min = 25.0
+    k_min = 125.0  # to prevent overlap due to nexcl = 2
     k_std = 250.0
     k_max = 350.0  # Swarm-CG parameters were already restricted
 
