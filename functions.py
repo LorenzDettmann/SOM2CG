@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 __licence__ = "MIT"
 
 import os
@@ -521,7 +521,7 @@ def write_itp(bead_types, coords0, charges, A_cg, ring_beads, beads, mol, n_conf
     # writes gromacs topology file
     with open(itp_name, 'w') as itp:
         itp.write('[moleculetype]\n')
-        itp.write(f'{name}    1\n')
+        itp.write(f'{name}    2\n')
         # write atoms section
         itp.write('\n[atoms]\n')
         for b, bead_type in enumerate(bead_types):
@@ -626,7 +626,7 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
     Refer to the main license text for citation information.
     """
     # Writes [angles] block in itp file
-    k_min = 25.0
+    k_min = 125.0  # to prevent overlap due to nexcl = 2
     k_std = 250.0
     k_max = 350.0  # Swarm-CG parameters were already restricted
 
