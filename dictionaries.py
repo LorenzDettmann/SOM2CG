@@ -240,7 +240,7 @@ fragments_bond_fc = {
     'HS26': [],
     'HS27': [None, None, 7089.49, None],
     'HS27p': [None, None, 6865.2, None],
-    'HS28': [None, None],
+    'HS28': [None, None, None, None, None],
     'HS29': [None, None, None, None, None],
     'HS30': [9747.73, None, None, 7427.81, None, 9747.73],
     'HS30p': [6159.02, None, None, 9148.34, None, 6159.02],
