@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.8.5"
+__version__ = "0.9.0"
 __licence__ = "MIT"
 
 import os
@@ -661,7 +661,8 @@ def write_angles(itp, bonds, constraints, beads, mol, n_confs, map_type, sequenc
                 k = get_angle_fc(sequence, a[0], a[1], a[2], k_std, k_min, k_max)
             else:
                 k = k_std
-            itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, 2, t, k))
+            angle_type = 1
+            itp.write('{:5d}{:3d}{:3d}{:5d}{:10.3f}{:10.1f}\n'.format(a[0] + 1, a[1] + 1, a[2] + 1, angle_type, t, k))
 
 
 def get_angle_fc(sequence, index1, index2, index3, k_std, k_min, k_max):
