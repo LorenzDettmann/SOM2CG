@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 __licence__ = "MIT"
 
 import os
@@ -51,8 +51,9 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from functions import (positive_integer, check_arguments, read_itps, create_vsomm_list, back_translation,
-                       create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file)
+                       create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file, abort_script)
 from dictionaries import fragments_mapping, fragments_lengths
+import yaml
 
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -82,8 +83,23 @@ def main():
                         help='Use standard force constants for all bonded interactions')
     parser.add_argument('-with_progress_bar', default='yes', choices=['yes', 'no'],
                         help='Activates a progress bar, could be turned off when redirecting the output into a file')
+    parser.add_argument('-config', type=str, help='Path to the YAML configuration file')
 
     args = parser.parse_args()
+
+    # load yaml configuration if provided
+    if args.config:
+        if not os.path.exists(args.config):
+            print(f"Error: The config file '{args.config}' does not exist.")
+            abort_script()
+        else:
+            with open(args.config, 'r') as file:
+                config_data = yaml.safe_load(file)
+            for key, value in config_data.items():
+                # overwrite default values
+                if hasattr(args, key) and getattr(args, key) == parser.get_default(key):
+                    setattr(args, key, value)
+
     # input and output locations
     path = args.input_dir
     gro = f'{path}/min_system.gro'

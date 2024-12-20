@@ -9,14 +9,9 @@ The script is written in Python 3. The following packages are needed and can be 
 pip install MDAnalysis rdkit
 ```
 
-## Getting started
+## Execution
 
-Clone the repository from Gitlab:
-```bash
-git clone https://gitlab.elaine.uni-rostock.de/ld207/martini-som
-```
-You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths
-using the following arguments:
+You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths using the following arguments:
 ```bash
 python3 martini_som.py [-V] [-h] [-nt 'number of threads'] 
                        [-input_dir 'input directory'] 
@@ -26,10 +21,11 @@ python3 martini_som.py [-V] [-h] [-nt 'number of threads']
                        [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
                        [-use_std_fc '(yes/no) use standard force constants']
                        [-with_progress_bar '(yes/no) activate a progress bar']
+                       [-config 'YAML configuration file']
 ```
 
 ## Contributing
-If you have any suggestions for improving the efficiency of the script, or suggestions for any additional features, feel free to create a pull request, or simply open a new issue.
+If you have any suggestions for improving the efficiency of the script, or for additional features, feel free to contact one of the authors of the publication.
 
 ## Acknowledgments
 Parts of this code are based on work by Mark A. Miller and coworkers, used with permission.
