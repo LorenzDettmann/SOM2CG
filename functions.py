@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.9.1"
+__version__ = "0.10.0"
 __licence__ = "MIT"
 
 import os
@@ -1022,6 +1022,17 @@ def write_water_file(cg_path, u):
         print(
             f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
             + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+    # Python script for solvation with YAML file
+    solvation_yaml = f"""file: "mapped.gro"
+output: "solvated.gro"
+number: "{round(N)}"
+distance: 0.180"""
+    yaml_file = "solvation.yaml"
+    if not os.path.exists(f"{cg_path}/{yaml_file}"):
+        with open(f"{cg_path}/{yaml_file}", "w") as f:
+            f.write(solvation_yaml)
+    print(f"Alternatively, you can use the solvation.py script with \'python3 solvation.py --config {yaml_file}'.")
 
 
 def write_top_file(cg_path, u, itp_list):
