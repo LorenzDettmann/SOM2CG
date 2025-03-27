@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 __licence__ = "MIT"
 
 import os
@@ -71,7 +71,7 @@ def main():
     parser.add_argument('-nt', type=positive_integer, default=1, help='Number of threads')
     parser.add_argument('-input_dir', default=f'{os.path.dirname(os.path.abspath(__file__))}',
                         help='Path to the input directory with the atomistic topology files')
-    parser.add_argument('-output_dir', default='INIT_cg',
+    parser.add_argument('-output_dir', default='INIT_CG',
                         help='Path to the output directory with the coarse-grained topology files')
     parser.add_argument('-n_confs', type=positive_integer, default=50,
                         help='Number of conformers to generate for the parametrization')

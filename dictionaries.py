@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 __licence__ = "MIT"
 
 import numpy as np
@@ -92,7 +92,9 @@ smiles = {
     'HS34': 'C1=C2OC3=C(O)C(NC)=CC(C([O-])=O)=C3C2=C(C([O-])=O)C=C1',
     'HS34p': 'C1=C2OC3=C(O)C(NC)=CC(C(O)=O)=C3C2=C(C(O)=O)C=C1',
     'HS35': 'CC(NC(C([O-])=O)C(CC)C)=O',
-    'HS35p': 'CC(NC(C(O)=O)C(CC)C)=O'
+    'HS35p': 'CC(NC(C(O)=O)C(CC)C)=O',
+    'HS37': 'C(=O)CC(O)C(O)C(CC([O-])=O)O',
+    'HS37p': 'C(=O)CC(O)C(O)C(CC(O)=O)O'
 }
 
 fragments_mapping = {
@@ -146,7 +148,9 @@ fragments_mapping = {
     'HS34p': [[1, 2, 3], [4, 5, 6], [16, 21, 22], [23, 24, 25, 26], [7, 8, 9, 10], [17, 18, 19, 20], [27, 28, 29],
               [11, 12], [14, 15], [13]],
     'HS35': [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12, 13]],
-    'HS35p': [[1, 2, 3], [4, 5, 6], [7, 8, 9, 10], [11, 12, 13, 14]]
+    'HS35p': [[1, 2, 3], [4, 5, 6], [7, 8, 9, 10], [11, 12, 13, 14]],
+    'HS37': [[1, 2, 16], [3, 4, 5], [6, 7, 8], [9, 10, 11, 12], [13, 14, 15]],
+    'HS37p': [[1, 2, 17], [3, 4, 5], [6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
 }
 
 fragments_connections = {
@@ -198,7 +202,9 @@ fragments_connections = {
     'HS34': [[0, 1], [0, 2], [0, 3], [1, 2], [1, 4], [2, 3], [2, 5], [3, 6]],
     'HS34p': [[0, 1], [0, 2], [0, 3], [1, 2], [1, 4], [2, 3], [2, 5], [3, 6]],
     'HS35': [[0, 1], [1, 2], [1, 3]],
-    'HS35p': [[0, 1], [1, 2], [1, 3]]
+    'HS35p': [[0, 1], [1, 2], [1, 3]],
+    'HS37': [[0, 1], [1, 2], [2, 3], [3, 4]],
+    'HS37p': [[0, 1], [1, 2], [2, 3], [3, 4]]
 }
 
 fragments_bond_fc = {
@@ -250,7 +256,9 @@ fragments_bond_fc = {
     'HS34': [None, None, None, None, 7020.35, None, 7020.35, 7633.4],
     'HS34p': [None, None, None, None, 5912.08, None, 5912.08, 7308.46],
     'HS35': [7800.78, 6948.89, 5507.46],
-    'HS35p':  [8248.41, 6137.88, 7201.04]
+    'HS35p':  [8248.41, 6137.88, 7201.04],
+    'HS37': [7118.96, 7852.93, 7053.94, 1712.19],
+    'HS37p': [6486.28, 6397.94, 6510.72, 2737.36]
 }
 
 fragments_angles_fc = {
@@ -449,6 +457,16 @@ fragments_angles_fc = {
         tuple([0, 1, 2]): 45.65,
         tuple([0, 1, 3]): 33.4,
         tuple([2, 1, 3]): 140.84,
+    },
+    'HS37': {
+        tuple([0, 1, 2]): 144.57,
+        tuple([1, 2, 3]): 108.60,
+        tuple([2, 3, 4]): 13.19,
+    },
+    'HS37p': {
+        tuple([0, 1, 2]): 143.02,
+        tuple([1, 2, 3]): 224.22,
+        tuple([2, 3, 4]): 45.49,
     }
 }
 
@@ -514,6 +532,8 @@ fragments_dihedral_angles_fc = {
     },
     'HS35': {},
     'HS35p': {},
+    'HS37': {},
+    'HS37p': {}
 }
 
 fragments_exclusions = {
@@ -583,7 +603,9 @@ fragments_exclusions = {
          [9, 1, 2, 3, 4, 5, 6, 7, 8],
          [8, 1, 2, 3, 4, 5, 6, 7]],
     'HS35': [],
-    'HS35p': []
+    'HS35p': [],
+    'HS37': [],
+    'HS37p': []
 }
 
 fragments_lengths = {
@@ -635,7 +657,9 @@ fragments_lengths = {
     'HS34': 10,
     'HS34p': 10,
     'HS35': 4,
-    'HS35p': 4
+    'HS35p': 4,
+    'HS37': 5,
+    'HS37p': 5
 }
 
 fragments_bead_types = {
@@ -687,7 +711,9 @@ fragments_bead_types = {
     'HS34': ['TC5', 'TC5', 'TC5', 'SN6', 'SQ5n', 'SQ5n', 'TN4', 'TC5e', 'TC5e', 'TN2a'],
     'HS34p': ['TC5', 'TC5', 'TC5', 'SN6', 'SP2', 'SP2', 'TN4', 'TC5e', 'TC5e', 'TN2a'],
     'HS35': ['SN5a', 'TN4', 'SQ5n', 'C2'],
-    'HS35p': ['SN5a', 'TN4', 'SP2', 'C2']
+    'HS35p': ['SN5a', 'TN4', 'SP2', 'C2'],
+    'HS37': ['SN5a', 'TP1', 'TP1', 'SP1', 'SQ5n'],
+    'HS37p': ['SN5a', 'TP1', 'TP1', 'SP1', 'SP2']
 }
 
 fragments_charges = {
@@ -739,7 +765,9 @@ fragments_charges = {
     'HS34': [0.0, 0.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, 0.0, 0.0],
     'HS34p': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     'HS35': [0.0, 0.0, -1.0, 0.0],
-    'HS35p': [0.0, 0.0, 0.0, 0.0]
+    'HS35p': [0.0, 0.0, 0.0, 0.0],
+    'HS37': [0.0, 0.0, 0.0, 0.0, -1.0],
+    'HS37p': [0.0, 0.0, 0.0, 0.0, 0.0]
 }
 
 fragments_vs = {
@@ -791,7 +819,9 @@ fragments_vs = {
     'HS34': {9: {0: 0.552, 3: 0}, 7: {0: -0.203, 1: 0.426, 2: 0}, 8: {1: 0.126, 2: 0.525, 3: 0}},
     'HS34p': {9: {0: 0.552, 3: 0}, 7: {0: -0.210, 1: 0.427, 2: 0}, 8: {1: 0.125, 2: 0.525, 3: 0}},
     'HS35': {},
-    'HS35p': {}
+    'HS35p': {},
+    'HS37': {},
+    'HS37p': {}
 }
 
 fragments_modify_first = {
@@ -876,7 +906,7 @@ fragments_modify_last = {
 # fragments ending with an ether group
 FRG_O = ['HS2', 'HS7', 'HS8', 'HS12', 'HS12p', 'HS16', 'HS16p', 'HS25', 'HS25p']
 # fragments with first and last bead having the same index, and having more than one bead (function for this possible)
-FRG_same = ['HS4', 'HS4p', 'HS13', 'HS13p', 'HS19', 'HS19p']
+FRG_same = ['HS4', 'HS4p', 'HS13', 'HS13p', 'HS19', 'HS19p', 'HS37', 'HS37p']
 
 # translation from RDKit to VSOMM2
 fragments_vsomm_indices = {
@@ -954,5 +984,10 @@ fragments_vsomm_indices = {
                        np.array([19, 20]), 18, 15, 11, 6, 7, np.array([9, 10]), 8, np.array([4, 5]), np.array([2, 3])],
                       dtype=object),
     'HS35': np.array([1, 2, np.array([4, 5]), 6, 7, 8, 9, 10, 12, 13, 11, 3], dtype=object),
-    'HS35p': np.array([1, 2, np.array([4, 5]), 6, 7, np.array([9, 10]), 8, 11, 13, 14, 12, 3], dtype=object)
+    'HS35p': np.array([1, 2, np.array([4, 5]), 6, 7, np.array([9, 10]), 8, 11, 13, 14, 12, 3], dtype=object),
+    'HS37': np.array([1, 2, 16, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, 13, 14, 15, np.array([10, 11])],
+                     dtype=object),
+    'HS37p': np.array(
+        [1, 2, 17, 3, np.array([4, 5]), 6, np.array([7, 8]), 9, 12, 13, np.array([15, 16]), 14, np.array([10, 11])],
+        dtype=object)
 }
