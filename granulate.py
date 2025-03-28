@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.11.1"
+__version__ = "0.12.0"
 __licence__ = "MIT"
 
 import os
@@ -79,6 +79,8 @@ def main():
                         help='Apply center of geometry (cog) or center of mass (com) mapping')
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
                         help='Parametrize the molecules, or only output the mapped structure file')
+    parser.add_argument('-solvate', default='no', choices=['yes', 'no'],
+                        help='Solvate the mapped structure file')
     parser.add_argument('-use_std_fc', default='no', choices=['yes', 'no'],
                         help='Use standard force constants for all bonded interactions')
     parser.add_argument('-with_progress_bar', default='yes', choices=['yes', 'no'],
@@ -105,6 +107,7 @@ def main():
     gro = f'{path}/min_system.gro'
     cg_path = args.output_dir
     map_type = args.map
+    solvate = args.solvate
     par = args.parametrize
     n_confs = args.n_confs
     num_threads = args.nt
@@ -144,7 +147,7 @@ def main():
                     done_tasks += 1
                     print(f'Progress: {done_tasks}/{len(sequences)}')
 
-    generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par)
+    generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par, solvate)
 
 
 if __name__ == "__main__":

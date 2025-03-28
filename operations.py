@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.11.1"
+__version__ = "0.12.0"
 __licence__ = "MIT"
 
 import os
@@ -50,6 +50,7 @@ from rdkit.Chem import AllChem
 import MDAnalysis as mda
 from MDAnalysis import transformations
 from fragment_data import *
+import solvation
 
 
 # read itp files
@@ -863,7 +864,7 @@ def backup_directory(dirpath):
     return backup_dir
 
 
-def check_arguments_and_backup(path, cg_path):
+def check_arguments_and_backup(path, cg_path, gro):
     # checks, if all arguments are properly set
     # additionally checks, if files are going to be overwritten
     if not os.path.exists(path):
@@ -893,7 +894,7 @@ def positive_integer(value):
     return int_value
 
 
-def generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par):
+def generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par, solvate):
     print(f" - Generating initial structure file from '{gro}'.")
     # unwrap
     u = unwrapped_atomistic_structure(path, gro, itp_list)
@@ -908,8 +909,8 @@ def generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vs
     mapped.atoms.write(f'{cg_path}/mapped.gro')
     add_info(f'{cg_path}/mapped.gro')
 
-    # write water structure file
-    write_water_file(cg_path, u)
+    # write water.gro file or solvate system
+    solvate_system(cg_path, u, solvate)
 
     if par == 'yes':
         # write topology file
@@ -1010,36 +1011,44 @@ def add_residue_info(u, mapped, sequences, mapping, resnames):
     mapped.add_TopologyAttr('name', names_gro)
 
 
-def write_water_file(cg_path, u):
-    # generate gro file for solvation, if not already present
-    water_gro = """Regular sized water particle
-1
-    1W      W      1   0.000   0.000   0.000
-   1.00000   1.00000   1.00000"""
-    file = "water.gro"
-    if not os.path.exists(f"{cg_path}/{file}"):
-        with open(f"{cg_path}/{file}", "w") as f:
-            f.write(water_gro)
-
+def solvate_system(cg_path, u, solvate):
     # number of coarse-grained water molecules
-    N = round(len(u.select_atoms('name OW')) / 4)
-
-    print(' - Done')
-    if N > 0:
-        print(
-            f"You can solvate the structure with \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
-            + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+    N = round(len(u.select_atoms('name OW')) / 4)   
 
     # Python script for solvation with YAML file
-    solvation_yaml = f"""file: "mapped.gro"
-output: "solvated.gro"
+    solvation_yaml = f"""file: "{cg_path}/mapped.gro"
+output: "{cg_path}/solvated.gro"
 number: "{round(N)}"
 distance: 0.180"""
     yaml_file = "solvation.yaml"
     if not os.path.exists(f"{cg_path}/{yaml_file}"):
         with open(f"{cg_path}/{yaml_file}", "w") as f:
             f.write(solvation_yaml)
-    print(f"Alternatively, you can use the solvation.py script with \'python3 solvation.py --config {yaml_file}'.")
+
+    if solvate == 'no':
+        # generate gro file for solvation, if not already present
+        water_gro = """Regular sized water particle
+    1
+        1W      W      1   0.000   0.000   0.000
+    1.00000   1.00000   1.00000"""
+        file = "water.gro"
+        if not os.path.exists(f"{cg_path}/{file}"):
+            with open(f"{cg_path}/{file}", "w") as f:
+                f.write(water_gro)
+
+        print(' - Done.')
+        if N > 0:
+            print(
+                f" - You can solvate the structure with\n \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
+                + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
+
+        print(f" - Alternatively, you can use the solvation.py script with\n \'python3 solvation.py --config {yaml_file}'.")
+    else:
+        # run solvation with solvation.py and solvation.yaml
+        solvation.main(['-config', f'{cg_path}/{yaml_file}'])
+        print(' - Done.')
+    print('Thanks for using Granulate.')
+
 
 
 def write_top_file(cg_path, u, itp_list):
@@ -1106,7 +1115,7 @@ def replace_first_line(file, info):
     with open(file, 'r') as f:
         lines = f.readlines()
 
-    lines[0] = info + " using MDAnalysis\n"
+    lines[0] = info + " and using MDAnalysis\n"
 
     with open(file, 'w') as f:
         f.writelines(lines)
@@ -1114,7 +1123,7 @@ def replace_first_line(file, info):
 
 def add_info(file):
     # add information on version number of this script into the file
-    info = f"This file was generated with the martini-som script v{__version__}"
+    info = f"This file was generated with the Granulate tool v{__version__}"
     with open(file, 'r') as f:
         content = f.read()
 

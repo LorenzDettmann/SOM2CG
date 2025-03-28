@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 __licence__ = "MIT"
 
 import numpy as np
