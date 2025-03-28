@@ -30,17 +30,28 @@ If you have any suggestions for improving the efficiency of the script, or for a
 ## Citation and Acknowledgments
 If you use Granulate, please cite the following papers:
 
-*Dettmann, L. F.; Kühn, O.; Ahmed, A. A. Automated Parametrization Approach for Coarse-Graining Soil Organic Matter Molecules. Journal of Chemical Theory and Computation, 2024, 20, 10684–10696. https://doi.org/10.1021/acs.jctc.4c01334.*
+    Dettmann, L. F.; Kühn, O.; Ahmed, A. A. Automated Parametrization Approach for 
+    Coarse-Graining Soil Organic Matter Molecules. Journal of Chemical Theory and 
+    Computation, 2024, 20, 10684–10696. https://doi.org/10.1021/acs.jctc.4c01334.
 
-*Dettmann, L. F.; Kühn, O.; Ahmed, A. A. Martini-Based Coarse-Grained Soil Organic Matter Model Derived from Atomistic Simulations. Journal of Chemical Theory and Computation, 2024, 20, 5291–5305. https://doi.org/10.1021/acs.jctc.4c00332.*
+    Dettmann, L. F.; Kühn, O.; Ahmed, A. A. Martini-Based Coarse-Grained Soil Organic 
+    Matter Model Derived from Atomistic Simulations. Journal of Chemical Theory and 
+    Computation, 2024, 20, 5291–5305. https://doi.org/10.1021/acs.jctc.4c00332.
 
 
 Parts of this code are based on work by Mark A. Miller and coworkers, used with permission.
 These parts are subject to the following citations:
 
-*Potter, T. D.; Haywood, N.; Teixeira, A.; Hodges, G.; Barrett, E. L.; Miller, M. A. Partitioning into Phosphatidylcholine–Cholesterol Membranes: Liposome Measurements, Coarse-Grained Simulations, and Implications for Bioaccumulation. Environmental Science: Processes & Impacts, 2023, 25, 1082–1093. https://doi.org/10.1039/d3em00081h.*
+    Potter, T. D.; Haywood, N.; Teixeira, A.; Hodges, G.; Barrett, E. L.; Miller, 
+    M. A. Partitioning into Phosphatidylcholine–Cholesterol Membranes: Liposome 
+    Measurements, Coarse-Grained Simulations, and Implications for Bioaccumulation. 
+    Environmental Science: Processes & Impacts, 2023, 25, 1082–1093. 
+    https://doi.org/10.1039/d3em00081h.
     
-*Potter, T. D.; Barrett, E. L.; Miller, M. A. Automated Coarse-Grained Mapping Algorithm for the Martini Force Field and Benchmarks for Membrane–Water Partitioning. Journal of Chemical Theory and Computation, 2021, 17, 5777–5791. https://doi.org/10.1021/acs.jctc.1c00322.*
+    Potter, T. D.; Barrett, E. L.; Miller, M. A. Automated Coarse-Grained Mapping 
+    Algorithm for the Martini Force Field and Benchmarks for Membrane–Water Partitioning. 
+    Journal of Chemical Theory and Computation, 2021, 17, 5777–5791. 
+    https://doi.org/10.1021/acs.jctc.1c00322.
 
 Please cite these works if you use this code in your research.
 We thank Mark. A. Miller and coworkers for their contributions.
