@@ -25,7 +25,7 @@ SOFTWARE.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __licence__ = "MIT"
 
 import numpy as np
@@ -51,7 +51,7 @@ def add_water_particles(existing_positions, n_new, max_attempts, min_distance, b
     attempts = 0
 
     while len(new_positions) < n_new and attempts < max_attempts:
-        sys.stdout.write(f"Solvating: {len(new_positions)} / {n_new}\n")
+        sys.stdout.write(f" - Solvating: {len(new_positions)} / {n_new}\n")
         sys.stdout.write("\033[F")
 
         candidate = np.random.rand(3) * box  # random positions within the box
@@ -69,6 +69,8 @@ def add_water_particles(existing_positions, n_new, max_attempts, min_distance, b
 
     if len(new_positions) < n_new:
         print(f"Warning: Only {len(new_positions)} out of {n_new} particles could be placed in the system.")
+    else:
+        sys.stdout.write(f" - Solvating: {len(new_positions)} / {n_new}\n")
     return new_positions
 
 def read_gro(filename):
@@ -115,38 +117,47 @@ def write_gro(filename, header, atom_lines, box, water_positions, resname="W", a
         # write box dimensions
         f.write(f"{box[0]:10.5f}{box[1]:10.5f}{box[2]:10.5f}\n")
 
-def main():
-    parser = argparse.ArgumentParser(description="This script adds coarse-grained water particles to a system provided in the GROMACS coordinate file format (.gro).")
+def abort_script():
+    print('Aborted')
+    exit()
 
-    #parser.add_argument('-h', '--help', action='help', help='Shows this help message')
-    parser.add_argument('-f', '--file', help='GROMACS coordinate file')
-    parser.add_argument('-o', '--output', help='Output coordinate file')
-    parser.add_argument('-n', '--number', help='Number of water particles')
-    parser.add_argument('-d', '--distance', help='Minimum distance to other particles')
-    parser.add_argument('-try', '--attempts', default=10000, help='Maximum number of attempts')
-    parser.add_argument('-cfg', '--config', type=str, help='YAML configuration file')
+def backup_file(filepath):
+    if not os.path.exists(filepath):
+        return None
 
-    args = parser.parse_args()
+    dirpath, filename = os.path.split(filepath)
+    
+    version = 1
+    # find next free backup version
+    while True:
+        backup_name = os.path.join(dirpath, f"#{filename}.{version}#")
+        if not os.path.exists(backup_name):
+            break
+        version += 1
 
-    # load yaml configuration if provided
-    if args.config:
-        if not os.path.exists(args.config):
-            print(f"Error: The config file '{args.config}' does not exist.")
-            abort_script()
-        else:
-            with open(args.config, 'r') as file:
-                config_data = yaml.safe_load(file)
-            for key, value in config_data.items():
-                # overwrite default values
-                if hasattr(args, key) and getattr(args, key) == parser.get_default(key):
-                    setattr(args, key, value)
+    os.rename(filepath, backup_name)
+    print(f' - Backed up {filename} to #{filename}.{version}#.')
+    return backup_name
 
+def run_solvation(args):
     input_file = args.file
     output_file = args.output
+    # check if input and output files exist
+    if not os.path.isfile(input_file):
+        print(f"Error: The input file '{input_file}' does not exist.")
+        abort_script()
+
+    if os.path.isfile(output_file):
+        backup_file(output_file)
+
+    if not args.number:
+        print(f"Error: Missing argument for -n (number of particles).")
+        abort_script()
     n_particles = int(args.number)
+
     min_distance = float(args.distance)
     max_attempts = int(args.attempts)
-    
+
     # read the input file
     header, atom_lines, box = read_gro(input_file)
 
@@ -164,6 +175,38 @@ def main():
 
     water_positions = add_water_particles(existing_positions, n_particles, max_attempts, min_distance, box)
     write_gro(output_file, header, atom_lines, box, water_positions)
+
+def main(arg_list=None):
+    parser = argparse.ArgumentParser(description="This script adds coarse-grained water particles to a system provided in the GROMACS coordinate file format (.gro).")
+
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
+                        help='Shows the version of the script')
+    parser.add_argument('-f', '--file', default='mapped.gro', help='GROMACS coordinate file')
+    parser.add_argument('-o', '--output', default='solvated.gro', help='Output coordinate file')
+    parser.add_argument('-n', '--number', help='Number of water particles')
+    parser.add_argument('-d', '--distance', default=0.180, help='Minimum distance to other particles')
+    parser.add_argument('-try', '--attempts', default=10000, help='Maximum number of attempts')
+    parser.add_argument('-config', '--config', type=str, help='YAML configuration file')
+
+    if arg_list is not None:
+        args = parser.parse_args(arg_list)
+    else:
+        args = parser.parse_args()
+    
+    # load yaml configuration if provided
+    if args.config:
+        if not os.path.exists(args.config):
+            print(f"Error: The config file '{args.config}' does not exist.")
+            abort_script()
+        else:
+            with open(args.config, 'r') as file:
+                config_data = yaml.safe_load(file)
+            for key, value in config_data.items():
+                # overwrite default values
+                if hasattr(args, key) and getattr(args, key) == parser.get_default(key):
+                    setattr(args, key, value)
+
+    run_solvation(args)
 
 if __name__ == "__main__":
     main()

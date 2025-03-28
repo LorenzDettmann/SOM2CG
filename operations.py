@@ -60,10 +60,6 @@ def read_itps(path, gro):
     file_list = [f.decode() for f in os.listdir(directory)]
     itp_list = []
 
-    if not os.path.exists(gro):
-        print(f"Error: The file '{gro}' containing the atomistic coordinates does not exist.")
-        abort_script()
-
     u = mda.Universe(gro)  # to get correct resnames
     n_gro = len(u.select_atoms("not (resname SOLV or resname SOL or resname CA2+ or resname NA+)"))
 
@@ -848,34 +844,45 @@ def abort_script():
     print('Aborted')
     exit()
 
+def backup_directory(dirpath):
+    if not os.path.isdir(dirpath):
+        return None
 
-def check_arguments(path, cg_path):
+    parent_dir, dirname = os.path.split(os.path.abspath(dirpath))
+    
+    version = 1
+    # find next free backup version
+    while True:
+        backup_dir = os.path.join(parent_dir, f"{dirname}.{version}")
+        if not os.path.exists(backup_dir):
+            break
+        version += 1
+
+    os.rename(dirpath, backup_dir)
+    print(f' - Backed up {dirname} to {dirname}.{version}.')
+    return backup_dir
+
+
+def check_arguments_and_backup(path, cg_path):
     # checks, if all arguments are properly set
     # additionally checks, if files are going to be overwritten
     if not os.path.exists(path):
         print(f"Error: The input directory '{path}' does not exist.")
         abort_script()
+    
+    if not os.path.exists(gro):
+        print(f"Error: The file '{gro}' containing the atomistic coordinates does not exist.")
+        abort_script()
 
+    # backup, if output directory already exists
+    if os.path.exists(cg_path):
+        backup_directory(cg_path)
     try:
-        os.makedirs(cg_path, exist_ok=True)
+        os.makedirs(cg_path)
     except OSError as e:
         print(f"Error: The output directory '{cg_path}' could not be created. {e}")
         abort_script()
 
-    output_prefix = 'HS_'
-    output_suffix = '.itp'
-    cg_coordinate_file = 'mapped.gro'
-    topology_file = 'topol.top'
-
-    output_files = [file for file in os.listdir(cg_path)
-                    if (file.startswith(output_prefix) and file.endswith(output_suffix)) or file == cg_coordinate_file
-                    or file == topology_file]
-
-    if output_files:
-        print(f"Warning: The given output directory '{cg_path}' does already contain topology files.")
-        user_input = input("Would you like to continue and overwrite existing files? (y/n) ")
-        if user_input.lower() != 'y':
-            abort_script()
 
 
 def positive_integer(value):

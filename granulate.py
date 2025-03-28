@@ -50,7 +50,7 @@ import argparse
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
-from operations import (positive_integer, check_arguments, read_itps, create_vsomm_list, back_translation,
+from operations import (positive_integer, check_arguments_and_backup, read_itps, create_vsomm_list, back_translation,
                        create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file, abort_script)
 from fragment_data import fragments_mapping, fragments_lengths
 import yaml
@@ -111,7 +111,7 @@ def main():
     gen_fc = args.use_std_fc
     progress_bar = args.with_progress_bar
 
-    check_arguments(path, cg_path)
+    check_arguments_and_backup(path, cg_path, gro)
     print(' - Reading atomistic topology files.')
     first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_itps(path, gro)
 
