@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 __licence__ = "MIT"
 
 import os
@@ -49,7 +49,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-from dictionaries import *
+from fragment_data import *
 
 
 # read itp files
