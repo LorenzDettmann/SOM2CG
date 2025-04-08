@@ -24,6 +24,13 @@ python3 granulate.py [-V] [-h] [-nt 'number of threads']
                      [-with_progress_bar '(yes/no) activate a progress bar']
                      [-config 'YAML configuration file']
 ```
+For example, the following command will use 4 threads to convert the atomistic topology files, located in the folder 'atomistic' with 500 conformers and solvate the coarse-grained system at the end:
+
+```bash
+python3 granulate.py -nt 4 -input_dir atomistic -n_confs 500 -solvate yes
+```
+
+You can decrease the number of conformers for testing to accelerate the parametrization step.
 
 ## Contributing
 If you have any suggestions for improving the efficiency of the script, or for additional features, feel free to contact one of the authors of the publication.
