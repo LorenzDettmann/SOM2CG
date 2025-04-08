@@ -1,0 +1,71 @@
+
+Model:                     None
+Random Seed:               111111
+Number of building blocks: 200
+Builing blocks per mol.:   5
+Number of Water Molecules: 300
+Number of ions:            69 Na+
+
+Fraction         Input Output  Score
+Carbon           0.638  0.553  0.134
+Hydrogen           -  0.032
+Oxygen             -  0.378
+Nitrogen         0.012  0.015  0.182
+Sulphur            -  0.023
+
+CarbonylC        0.150  0.143  0.044
+CarboxylC        0.080  0.082  0.026
+Aromatic         0.580  0.590  0.017
+Acetal           0.040  0.040  0.008
+Heteroaliphatic  0.010  0.010  0.008
+Aliphatic        0.140  0.135  0.034
+
+                 Input Output
+[COO-]/[COOH]    631.0   -1.0    1.0
+
+Counter
+Carbon                1109
+Nitrogen                25
+CarbonylC              159
+CarboxylC               91
+Aromatic               654
+Acetal                  44
+Heteroaliphatic         11
+Aliphatic              150
+
+Building Blocks used
+ HS28:    52
+ HS11:    22
+ HS14:    20
+ HS16:    17
+ HS23:    15
+ HS18:    11
+  HS1:    10
+ HS17:     7
+  HS7:     5
+ HS21:     5
+ HS35:     5
+ HS27:     5
+  HS8:     4
+ HS32:     4
+ HS19:     3
+ HS22:     3
+ HS20:     3
+  HS2:     3
+ HS29:     2
+ HS30:     2
+  HS3:     1
+ HS24:     1
+
+charge and masses
+Protonated:          0
+Deprotonated:       69
+charge:            -69
+mass:           24095.864
+
+Content expressed as the fraction of heavy atoms (x)
+x_SOM           0.823
+x_water         0.144
+x_ion           0.033
+
+        

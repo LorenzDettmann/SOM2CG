@@ -1,0 +1,23 @@
+[ moleculetype ]
+; Name            nrexcl
+Na+     0
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+     1        NA+      1    NA+     NA      1        1.0    22.9898
+
+[ bonds ]
+;  ai    aj funct            c0            c1            c2            c3
+
+[ exclusions ]
+;  ai    aj
+
+[ pairs ]
+;  ai    aj funct
+
+[ angles ]
+;  ai    aj    ak funct            c0            c1            c2            c3        
+
+[ dihedrals ]
+;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5      
+

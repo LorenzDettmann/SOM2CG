@@ -1,0 +1,100 @@
+
+; Include forcefield parameters
+#include "gromos54a7.ff/forcefield.itp"
+
+; Include water topology
+#include "gromos54a7.ff/spc.itp"
+
+; Include HS topologies
+#include "HS_1.itp"
+#include "HS_2.itp"
+#include "HS_3.itp"
+#include "HS_4.itp"
+#include "HS_5.itp"
+#include "HS_6.itp"
+#include "HS_7.itp"
+#include "HS_8.itp"
+#include "HS_9.itp"
+#include "HS_10.itp"
+#include "HS_11.itp"
+#include "HS_12.itp"
+#include "HS_13.itp"
+#include "HS_14.itp"
+#include "HS_15.itp"
+#include "HS_16.itp"
+#include "HS_17.itp"
+#include "HS_18.itp"
+#include "HS_19.itp"
+#include "HS_20.itp"
+#include "HS_21.itp"
+#include "HS_22.itp"
+#include "HS_23.itp"
+#include "HS_24.itp"
+#include "HS_25.itp"
+#include "HS_26.itp"
+#include "HS_27.itp"
+#include "HS_28.itp"
+#include "HS_29.itp"
+#include "HS_30.itp"
+#include "HS_31.itp"
+#include "HS_32.itp"
+#include "HS_33.itp"
+#include "HS_34.itp"
+#include "HS_35.itp"
+#include "HS_36.itp"
+#include "HS_37.itp"
+#include "HS_38.itp"
+#include "HS_39.itp"
+#include "HS_40.itp"
+
+; Include ion topology
+#include "Na+.itp"
+
+[ system ]
+; Name
+system_ions
+
+[ molecules ]
+; Compound            #mols
+HS_1            1
+HS_2            1
+HS_3            1
+HS_4            1
+HS_5            1
+HS_6            1
+HS_7            1
+HS_8            1
+HS_9            1
+HS_10           1
+HS_11           1
+HS_12           1
+HS_13           1
+HS_14           1
+HS_15           1
+HS_16           1
+HS_17           1
+HS_18           1
+HS_19           1
+HS_20           1
+HS_21           1
+HS_22           1
+HS_23           1
+HS_24           1
+HS_25           1
+HS_26           1
+HS_27           1
+HS_28           1
+HS_29           1
+HS_30           1
+HS_31           1
+HS_32           1
+HS_33           1
+HS_34           1
+HS_35           1
+HS_36           1
+HS_37           1
+HS_38           1
+HS_39           1
+HS_40           1
+Na+            69
+SOL           300
