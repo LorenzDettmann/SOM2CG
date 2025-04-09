@@ -59,7 +59,7 @@ warnings.filterwarnings("ignore", category=Warning)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Granulate - A tool for converting atomistic Soil Organic Matter '
+    parser = argparse.ArgumentParser(description='SOM2CG - A tool for converting atomistic Soil Organic Matter '
                                                  '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
                                                  'to a coarse-grained representation, compatible with the '
                                                  'Martini 3 force field.', add_help=False)

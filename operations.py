@@ -1047,7 +1047,7 @@ distance: 0.180"""
         # run solvation with solvation.py and solvation.yaml
         solvation.main(['-config', f'{cg_path}/{yaml_file}'])
         print(' - Done.')
-    print('Thanks for using Granulate.')
+    print('Thank you for using SOM2CG.')
 
 
 
@@ -1123,7 +1123,7 @@ def replace_first_line(file, info):
 
 def add_info(file):
     # add information on version number of this script into the file
-    info = f"This file was generated with the Granulate tool v{__version__}"
+    info = f"This file was generated with the SOM2CG tool v{__version__}"
     with open(file, 'r') as f:
         content = f.read()
 
