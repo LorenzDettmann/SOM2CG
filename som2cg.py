@@ -106,7 +106,7 @@ def main():
 
     # input and output locations
     path = args.input_dir
-    oord_file = args.coords
+    coord_file = args.coords
     if coord_file is None:
         gro = f'{path}/min_system.gro'
     else:
