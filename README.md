@@ -1,6 +1,6 @@
 # SOM2CG - Coarse-graining soil organic matter models
 
-A tool for converting atomistic soil organic matter (SOM) models from the Vienna soil organic matter modeler 2 (VSOMM2) to a coarse-grained representation, compatible with the Martini 3 force field.
+A tool for converting atomistic soil organic matter (SOM) models from the Vienna soil organic matter modeler 2 (VSOMM2, https://somm.boku.ac.at) to a coarse-grained representation, compatible with the Martini 3 force field.
 
 ## Prerequisites
 
