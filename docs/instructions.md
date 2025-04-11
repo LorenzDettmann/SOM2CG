@@ -113,5 +113,5 @@
 <img src="images/HS2_RDKit.png" alt="RDKit Representation" width="300">
 <img src="images/HS2_VSOMM2.png" alt="VSOMM2 Representation" width="300">
 
-  *Comparison of the molecular representations of RDKit (left) and VSOMM2 (right) for the HS2 fragment. Placeholder atoms (\*) are added to the original SMILES of HS2 for easier comparison. Note that while hydrogens influence the determination of bonded interaction parameters in RDKit, they are not taken into account in the translation from RDKit to VSOMM2.*
+  *Comparison of the molecular representations of RDKit (a) and VSOMM2 (b) for the HS2 fragment. Placeholder atoms (\*) are added to the original SMILES of HS2 for easier comparison. Note that while hydrogens influence the determination of bonded interaction parameters in RDKit, they are not taken into account in the translation from RDKit to VSOMM2.*
 
