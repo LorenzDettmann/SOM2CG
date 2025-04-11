@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.12.0"
+__version__ = "0.12.2"
 __licence__ = "MIT"
 
 import os
@@ -75,6 +75,8 @@ def main():
                         help='Path to the output directory with the coarse-grained topology files')
     parser.add_argument('-n_confs', type=positive_integer, default=50,
                         help='Number of conformers to generate for the parametrization')
+    parser.add_argument('-coords', default= None, 
+                        help='Name of the atomistic coordinate file in the input directory')
     parser.add_argument('-map', default='cog', choices=['cog', 'com'],
                         help='Apply center of geometry (cog) or center of mass (com) mapping')
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],
@@ -104,7 +106,11 @@ def main():
 
     # input and output locations
     path = args.input_dir
-    gro = f'{path}/min_system.gro'
+    oord_file = args.coords
+    if coord_file is None:
+        gro = f'{path}/min_system.gro'
+    else:
+        gro = f'{coord_file}'
     cg_path = args.output_dir
     map_type = args.map
     solvate = args.solvate
