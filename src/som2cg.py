@@ -41,8 +41,8 @@ We thank Mark. A. Miller and coworkers for their contributions.
 """
 
 __author__ = "Lorenz Dettmann"
-__email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.12.2"
+__email__ = "dettmann.software@mailbox.org"
+__version__ = "0.13.0.dev0"
 __licence__ = "MIT"
 
 import os
@@ -50,16 +50,16 @@ import argparse
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
-from operations import (positive_integer, check_arguments_and_backup, read_itps, create_vsomm_list, back_translation,
+from .operations import (positive_integer, check_arguments_and_backup, read_itps, create_vsomm_list, back_translation,
                        create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file, abort_script)
-from fragment_data import fragments_mapping, fragments_lengths
+from .fragment_data import fragments_mapping, fragments_lengths
 import yaml
 
 warnings.filterwarnings("ignore", category=Warning)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SOM2CG - A tool for converting atomistic Soil Organic Matter '
+    parser = argparse.ArgumentParser(description='SOM2CG - A tool for converting atomistic soil organic matter '
                                                  '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
                                                  'to a coarse-grained representation, compatible with the '
                                                  'Martini 3 force field.', add_help=False)

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "som2cg"
+version = "0.13.0.dev0"
+description = "Coarse-graining soil organic matter models to Martini 3"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+authors = [{ name = "Lorenz F. Dettmann" }]
+dependencies = [
+  "mdanalysis",
+  "rdkit",
+  "pyyaml",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/LorenzDettmann/SOM2CG"
+
+[tool.setuptools.packages.find]
+where = ["src"]

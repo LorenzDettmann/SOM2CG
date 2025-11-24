@@ -38,8 +38,8 @@ We thank Mark. A. Miller and coworkers for their contributions.
 """
 
 __author__ = "Lorenz Dettmann"
-__email__ = "lorenz.dettmann@uni-rostock.de"
-__version__ = "0.12.2"
+__email__ = "dettmann.software@mailbox.org"
+__version__ = "0.13.0.dev0"
 __licence__ = "MIT"
 
 import os
@@ -49,8 +49,8 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import MDAnalysis as mda
 from MDAnalysis import transformations
-from fragment_data import *
-import solvation
+from .fragment_data import *
+import .solvation
 
 
 # read itp files

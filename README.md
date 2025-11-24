@@ -1,40 +1,40 @@
-# SOM2CG - Coarse-graining soil organic matter models
+# SOM2CG - Coarse-Graining Soil Organic Matter Models
 
 A tool for converting atomistic soil organic matter (SOM) models from the Vienna soil organic matter modeler 2 (VSOMM2, https://somm.boku.ac.at) to a coarse-grained representation, compatible with the Martini 3 force field.
 
 ## Prerequisites
 
-The script is written in Python 3. The following packages are needed and can be installed via `pip`:
+The program is written in Python 3 and requires the packages `mdanalysis`, `rdkit`, and `pyyaml`. SOM2CG can be installed via `pip`:
 ```bash
-pip install mdanalysis rdkit pyyaml
+pip install som2cg
 ```
 
 ## Execution
 
-You can execute the script in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths using the following arguments:
+You can execute the program in the directory with the topology files from the VSOMM2, or modify e.g. the directory paths using the following arguments:
 ```bash
-python3 som2cg.py [-V] [-h] [-nt 'number of threads'] 
-                  [-input_dir 'input directory'] 
-                  [-output_dir 'output directory'] 
-                  [-n_confs 'number of conformers']
-                  [-coords 'atomistic coordinate file']  
-                  [-map '"cog" or "com" mapping'] 
-                  [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
-                  [-solvate '(yes/no) solvate the mapped structure file']
-                  [-use_std_fc '(yes/no) use standard force constants']
-                  [-with_progress_bar '(yes/no) activate a progress bar']
-                  [-config 'YAML configuration file']
+som2cg [-V] [-h] [-nt 'number of threads'] 
+       [-input_dir 'input directory'] 
+       [-output_dir 'output directory'] 
+       [-n_confs 'number of conformers']
+       [-coords 'atomistic coordinate file']  
+       [-map '"cog" or "com" mapping'] 
+       [-parametrize '(yes/no) parametrize the molecules, or only output mapped structure file']
+       [-solvate '(yes/no) solvate the mapped structure file']
+       [-use_std_fc '(yes/no) use standard force constants']
+       [-with_progress_bar '(yes/no) activate a progress bar']
+       [-config 'YAML configuration file']
 ```
 For example, the following command will use 4 threads to convert the atomistic topology files, located in the folder 'atomistic' with 500 conformers and solvate the coarse-grained system at the end:
 
 ```bash
-python3 som2cg.py -nt 4 -input_dir atomistic -n_confs 500 -solvate yes
+som2cg -nt 4 -input_dir atomistic -n_confs 500 -solvate yes
 ```
 
 You can decrease the number of conformers for testing to accelerate the parametrization step.
 
 ## Contributing
-If you have any suggestions for improving the efficiency of the script, or for additional features, feel free to contact one of the authors of the publication.
+If you have any suggestions for improving the efficiency of the program, or for additional features, feel free to contact one of the authors of the publication.
 
 ## Citation and Acknowledgments
 If you use SOM2CG, please cite the following papers:

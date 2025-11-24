@@ -1,4 +1,4 @@
-# Instructions for Use
+# Instructions for use
 - For testing purposes, a lower number of configurations, set by `-n_conf`, can be used to accelerate the parametrization process. For example, a value around 10 might be sufficient.
 
 - For production runs, several hundred up to a thousand conformers might be required. This depends on the number of fragments in the molecules and the convergence behavior of the bonded interactions (see Figure 5 in Dettmann et al., 2024a, DOI: 10.1021/acs.jctc.4c01334).
@@ -19,9 +19,9 @@
 
 - Please consider using the `.mdp` files provided in the repository. These allow, for example, the use of the `define = -Dmin` option for better conversion during the energy minimization step.
 
-# Possible Improvements
+# Known issues and possible improvements
 - **GROMACS Stability**:  
-    Numerical stability issues have been observed with GROMACS versions later than 2019.
+    Numerical stability issues have been observed with the GROMACS release series 2022. It is therefore recommended to perform the coarse-grained simulations with newer GROMACS versions.
 - **Bead Type Fine-Tuning**:  
     Fine-tuning the bead types could improve the model further, particularly regarding the octanol–water free energies. This issue might partly stem from the (phenol) Martini beads not accurately reproducing these values. (See Figure S5 in the Supporting Information of Dettmann et al., 2024b, DOI: 10.1021/acs.jctc.4c00332; note that while some fragments align well with hexadecane–water and chloroform–water free energies, discrepancies with the octanol–water values can be quite pronounced.)
 - **Enhanced Bead Type and Bonded Interaction Database**:  

@@ -24,7 +24,7 @@ SOFTWARE.
 """
 
 __author__ = "Lorenz Dettmann"
-__email__ = "lorenz.dettmann@uni-rostock.de"
+__email__ = "dettmann.software@mailbox.org"
 __version__ = "0.2.0"
 __licence__ = "MIT"
 
