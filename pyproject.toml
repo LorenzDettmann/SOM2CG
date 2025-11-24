@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,8 +8,9 @@ version = "0.13.0.dev0"
 description = "Coarse-graining soil organic matter models to Martini 3"
 readme = "README.md"
 requires-python = ">=3.8"
-license = { file = "LICENSE" }
-authors = [{ name = "Lorenz F. Dettmann" }]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Lorenz Dettmann" }]
 dependencies = [
   "mdanalysis",
   "rdkit",
