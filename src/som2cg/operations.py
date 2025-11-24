@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "dettmann.software@mailbox.org"
-__version__ = "0.13.0.dev0"
+__version__ = "0.13.0"
 __licence__ = "MIT"
 
 import os
@@ -50,7 +50,7 @@ from rdkit.Chem import AllChem
 import MDAnalysis as mda
 from MDAnalysis import transformations
 from .fragment_data import *
-import .solvation
+from . import solvation
 
 
 # read itp files
@@ -1042,10 +1042,10 @@ distance: 0.180"""
                 f" - You can solvate the structure with\n \'gmx insert-molecules -ci water.gro -nmol {round(N)}"
                 + " -f mapped.gro -radius 0.180 -try 1000 -o solvated.gro &> solvation.log\'")
 
-        print(f" - Alternatively, you can use the solvation.py script with\n \'python3 solvation.py --config {yaml_file}'.")
+        print(f" - Alternatively, you can use the following command\n \'som2cg solvate --config {os.path.join(cg_path, yaml_file)}'.")
     else:
         # run solvation with solvation.py and solvation.yaml
-        solvation.main(['-config', f'{cg_path}/{yaml_file}'])
+        solvation.main(['-config', f'{os.path.join(cg_path, yaml_file)}'])
         print(' - Done.')
     print('Thank you for using SOM2CG.')
 

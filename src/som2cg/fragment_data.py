@@ -39,7 +39,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "dettmann.software@mailbox.org"
-__version__ = "0.13.0.dev0"
+__version__ = "0.13.0"
 __licence__ = "MIT"
 
 import numpy as np

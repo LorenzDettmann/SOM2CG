@@ -42,7 +42,7 @@ We thank Mark. A. Miller and coworkers for their contributions.
 
 __author__ = "Lorenz Dettmann"
 __email__ = "dettmann.software@mailbox.org"
-__version__ = "0.13.0.dev0"
+__version__ = "0.13.0"
 __licence__ = "MIT"
 
 import os
@@ -53,18 +53,25 @@ from tqdm import tqdm
 from .operations import (positive_integer, check_arguments_and_backup, read_itps, create_vsomm_list, back_translation,
                        create_mapping_vsomm, create_resname_list, parametrize, generate_structure_file, abort_script)
 from .fragment_data import fragments_mapping, fragments_lengths
+from . import solvation
+import sys
 import yaml
 
 warnings.filterwarnings("ignore", category=Warning)
 
 
 def main():
+    # check for subcommand "solvate"
+    if len(sys.argv) > 1 and sys.argv[1] == "solvate":
+        solvation.main(sys.argv[2:])
+        return
+
+    # arguments
     parser = argparse.ArgumentParser(description='SOM2CG - A tool for converting atomistic soil organic matter '
                                                  '(SOM) models from the Vienna Soil Organic Matter Modeler 2 (VSOMM2) '
                                                  'to a coarse-grained representation, compatible with the '
                                                  'Martini 3 force field.', add_help=False)
 
-    # arguments
     parser.add_argument('-V', '--version', action='version', version=f'%(prog)s {__version__}',
                         help='Shows the version of the script')
     parser.add_argument('-h', '--help', action='help', help='Shows this help message')
@@ -108,7 +115,7 @@ def main():
     path = args.input_dir
     coord_file = args.coords
     if coord_file is None:
-        gro = f'{path}/min_system.gro'
+        gro = f'{os.path.join(path, "min_system.gro")}'
     else:
         gro = f'{coord_file}'
     cg_path = args.output_dir

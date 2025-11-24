@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "som2cg"
-version = "0.13.0.dev0"
+version = "0.13.0.dev3"
 description = "Coarse-graining soil organic matter models to Martini 3"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -17,8 +17,8 @@ dependencies = [
   "pyyaml",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/LorenzDettmann/SOM2CG"
-
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+som2cg = "som2cg.som2cg:main"
