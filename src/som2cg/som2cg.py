@@ -85,7 +85,7 @@ def main():
     parser.add_argument('-coords', default= None, 
                         help='Name of the atomistic coordinate file')
     parser.add_argument('-tpr', default=None, 
-                        help='Name of the atomistic .tpr file')
+                        help='Name of the atomistic .tpr file (optional)')
     parser.add_argument('-map', default='cog', choices=['cog', 'com'],
                         help='Apply center of geometry (cog) or center of mass (com) mapping')
     parser.add_argument('-parametrize', default='yes', choices=['yes', 'no'],

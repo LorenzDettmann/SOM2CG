@@ -74,17 +74,16 @@ def read_topology(path, gro, tpr):
     # if .tpr file is given, .itp files are not read
     if tpr:
         u = mda.Universe(tpr, gro)  # warning if number of atoms in .gro and .tpr differ
-        # extract HS molecules using the segid
-        HS_segids = [segid for segid in np.unique(u.atoms.segids) if 'HS' in segid]
-        HS_segids_sorted = sorted(HS_segids, key=lambda s: int(s.split('_')[1]))
-        HS_atom_groups = [u.select_atoms(f'segid {segid}') for segid in HS_segids_sorted]
+        # extract HS molecules
+        MOLS = u.atoms.fragments
+        HS_atom_groups = [HS_MOL for HS_MOL in MOLS if all('HS' in atom.resname for atom in HS_MOL)]
 
         for atom_group in HS_atom_groups:
             # shift indices to zero-based indexing
             n, sequence, first_atoms, first_add, last_atoms, last_add = get_first_last_atoms(u_gro, atom_group, n, sequence, 
                                                                         first_atoms, first_add, last_atoms, last_add, tpr)
             
-        itp_list = [f"HS_{segid.split('_')[-1]}.itp" for segid in HS_segids_sorted]
+        itp_list = [f"HS_{i}.itp" for i in range(1, len(HS_atom_groups) + 1)]
 
     # read .itp files
     else:
@@ -907,9 +906,10 @@ def check_arguments_and_backup(path, cg_path, gro, tpr):
         print(f"Error: The file '{gro}' containing the atomistic coordinates does not exist.")
         abort_script()
 
-    if not os.path.exists(tpr):
-        print(f"Error: The file '{tpr}' topology file does not exist.")
-        abort_script()
+    if tpr:
+        if not os.path.exists(tpr):
+            print(f"Error: The file '{tpr}' topology file does not exist.")
+            abort_script()
 
     # backup, if output directory already exists
     if os.path.exists(cg_path):
