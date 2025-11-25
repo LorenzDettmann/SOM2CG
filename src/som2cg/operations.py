@@ -895,15 +895,20 @@ def backup_directory(dirpath):
     return backup_dir
 
 
-def check_arguments_and_backup(path, cg_path, gro):
+def check_arguments_and_backup(path, cg_path, gro, tpr):
     # checks, if all arguments are properly set
     # additionally checks, if files are going to be overwritten
     if not os.path.exists(path):
         print(f"Error: The input directory '{path}' does not exist.")
         abort_script()
     
+    # the gro file is also needed if the tpr file is given, because MDAnalysis cannot read coordinates from it
     if not os.path.exists(gro):
         print(f"Error: The file '{gro}' containing the atomistic coordinates does not exist.")
+        abort_script()
+
+    if not os.path.exists(tpr):
+        print(f"Error: The file '{tpr}' topology file does not exist.")
         abort_script()
 
     # backup, if output directory already exists
