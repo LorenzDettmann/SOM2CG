@@ -130,7 +130,7 @@ def main():
     gen_fc = args.use_std_fc
     progress_bar = args.with_progress_bar
 
-    check_arguments_and_backup(path, cg_path, gro)
+    check_arguments_and_backup(path, cg_path, gro, tpr)
     print(' - Reading atomistic topology.')
     first_atoms, first_add, last_atoms, last_add, sequences, itp_list = read_topology(path, gro, tpr)
 
