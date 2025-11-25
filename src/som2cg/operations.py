@@ -53,17 +53,10 @@ from .fragment_data import *
 from . import solvation
 
 
-# read itp files
-def read_itps(path, gro):
+# read topology files
+def read_topology(path, gro, tpr):
     directory = os.fsencode(path)
-
-    # unfortunately, residue names are not always correctly assigned in the .itp files
-    file_list = [f.decode() for f in os.listdir(directory)]
-    itp_list = []
-
-    u = mda.Universe(gro)  # to get correct resnames
-    n_gro = len(u.select_atoms("not (resname SOLV or resname SOL or resname CA2+ or resname NA+)"))
-
+    
     first_atoms = []
     last_atoms = []
     first_add = []
@@ -72,73 +65,111 @@ def read_itps(path, gro):
     # sequence of fragments
     sequence = []
 
+    # number of atoms counted in the topology
     n = 0
-    sorted_list = sorted([file for file in file_list if file.startswith("HS_") and file.endswith(".itp")],
-                         key=lambda x: int(x.split('_')[1].split('.')[0]))
-    if not sorted_list:
-        print(f"Error: No topology files of the form 'HS_*.itp' could be found in '{path}'.")
-        abort_script()
 
-    for file in sorted_list:
-        itp_list.append(f'{file}')
-        u1 = mda.Universe(f'{path}/{file}', topology_format='ITP')
-        # read out sequence of fragments, HS1 has C1 and CA
-        C1_CA_atoms = u.atoms[np.add(u1.select_atoms('name C1 or name CA').indices, n)]
-        C1_CA_atoms -= C1_CA_atoms.select_atoms('name CA and resname HS1')
-        sequence.append(C1_CA_atoms.resnames)
+    # to get correct resnames
+    u_gro = mda.Universe(gro)  
 
-        n += len(u1.atoms)  # index for last atom
-        if u1.atoms[0].type == 'HC':
-            first_atoms.append('H')
-            first_add.append(1)
-        elif u1.atoms[0].type == 'CH3':
-            if u1.atoms[0].name == 'C1':  # this methyl group is part of the fragment by default
-                first_atoms.append('H')
-                first_add.append(0)
-            else:
-                first_atoms.append('C')
-                first_add.append(1)
-        elif u1.atoms[0].type == 'CH2':
-            first_atoms.append('H')
-            first_add.append(0)
-        elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
-            first_atoms.append('O')
-            first_add.append(2)
-        else:
-            print(f'{file}: No rule for first atom type {u1.atoms[0].type}.')
-            first_atoms.append('H')
-            first_add.append(0)
-        if u1.atoms[-1].type == 'HC':
-            last_atoms.append('H')
-            last_add.append(1)
-        elif u1.atoms[-1].type == 'CH3':
-            if u1.atoms[-1].name in ('C3', 'C4', 'C13', 'CD2'):
-                last_atoms.append('H')
-                last_add.append(0)
-            else:
-                last_atoms.append('C')
-                last_add.append(1)
-        elif u1.atoms[-1].type == 'CH2':
-            last_atoms.append('H')
-            last_add.append(0)
-        elif u1.atoms[-1].type == 'H':
-            if u.atoms[n - 1].resname in FRG_O:
-                last_atoms.append('H')
-                last_add.append(1)
-            else:
-                last_atoms.append('O')
-                last_add.append(2)
-        else:
-            print(f'{file}: No rule for last atom type {u1.atoms[0].type}.')
-            last_atoms.append('H')
-            last_add.append(0)
+    # if .tpr file is given, .itp files are not read
+    if tpr:
+        u = mda.Universe(tpr, gro)  # warning if number of atoms in .gro and .tpr differ
+        # extract HS molecules using the segid
+        HS_segids = [segid for segid in np.unique(u.atoms.segids) if 'HS' in segid]
+        HS_segids_sorted = sorted(HS_segids, key=lambda s: int(s.split('_')[1]))
+        HS_atom_groups = [u.select_atoms(f'segid {segid}') for segid in HS_segids_sorted]
 
-    if n != n_gro:
-        print(f"Error: Number of HS atoms in '{gro}' does not match with the number of atoms from the topology files "
-              f"in '{path}/HS_*.itp'. Are some files missing?")
-        abort_script()
+        for atom_group in HS_atom_groups:
+            # shift indices to zero-based indexing
+            n, sequence, first_atoms, first_add, last_atoms, last_add = get_first_last_atoms(u_gro, atom_group, n, sequence, 
+                                                                        first_atoms, first_add, last_atoms, last_add, tpr)
+            
+        itp_list = [f"HS_{segid.split('_')[-1]}.itp" for segid in HS_segids_sorted]
+
+    # read .itp files
+    else:
+        # unfortunately, residue names are not always correctly assigned in the .itp files
+        file_list = [f.decode() for f in os.listdir(directory)]
+        itp_list = []
+
+        sorted_list = sorted([file for file in file_list if file.startswith("HS_") and file.endswith(".itp")],
+                            key=lambda x: int(x.split('_')[1].split('.')[0]))
+        if not sorted_list:
+            print(f"Error: No topology files of the form 'HS_*.itp' could be found in '{path}'.")
+            abort_script()
+
+        for file in sorted_list:
+            itp_list.append(f'{file}')
+            u1 = mda.Universe(f'{path}/{file}', topology_format='ITP')
+            n, sequence, first_atoms, first_add, last_atoms, last_add = get_first_last_atoms(u_gro, u1, n, sequence, 
+                                                                        first_atoms, first_add, last_atoms, last_add, file)
+
+        n_gro = len(u_gro.select_atoms("not (resname SOLV or resname SOL or resname CA2+ or resname NA+)"))
+        if n != n_gro:
+            print(f"Error: Number of HS atoms in '{gro}' does not match with the number of atoms from the topology files "
+                f"in '{os.path.join({path}, 'HS_*.itp')}'. Are some files missing?")
+            abort_script()
 
     return first_atoms, first_add, last_atoms, last_add, sequence, itp_list
+
+
+def get_first_last_atoms(u_gro, u1, n, sequence, first_atoms, first_add, last_atoms, last_add, file):
+    # read out sequence of fragments, HS1 has C1 and CA
+    if file.endswith('.tpr'):
+        # other indexing
+        C1_CA_atoms = u_gro.atoms[np.add(u1.select_atoms('name C1 or name CA').indices - n, n)]
+    else:
+        C1_CA_atoms = u_gro.atoms[np.add(u1.select_atoms('name C1 or name CA').indices, n)]
+    C1_CA_atoms -= C1_CA_atoms.select_atoms('name CA and resname HS1')
+    sequence.append(C1_CA_atoms.resnames)
+
+    n += len(u1.atoms)  # index for last atom
+    if u1.atoms[0].type == 'HC':
+        first_atoms.append('H')
+        first_add.append(1)
+    elif u1.atoms[0].type == 'CH3':
+        if u1.atoms[0].name == 'C1':  # this methyl group is part of the fragment by default
+            first_atoms.append('H')
+            first_add.append(0)
+        else:
+            first_atoms.append('C')
+            first_add.append(1)
+    elif u1.atoms[0].type == 'CH2':
+        first_atoms.append('H')
+        first_add.append(0)
+    elif u1.atoms[0].type == 'H':  # hydrogen of hydroxy group
+        first_atoms.append('O')
+        first_add.append(2)
+    else:
+        print(f'{file}: No rule for first atom type {u1.atoms[0].type}.')
+        first_atoms.append('H')
+        first_add.append(0)
+    if u1.atoms[-1].type == 'HC':
+        last_atoms.append('H')
+        last_add.append(1)
+    elif u1.atoms[-1].type == 'CH3':
+        if u1.atoms[-1].name in ('C3', 'C4', 'C13', 'CD2'):
+            last_atoms.append('H')
+            last_add.append(0)
+        else:
+            last_atoms.append('C')
+            last_add.append(1)
+    elif u1.atoms[-1].type == 'CH2':
+        last_atoms.append('H')
+        last_add.append(0)
+    elif u1.atoms[-1].type == 'H':
+        if u_gro.atoms[n - 1].resname in FRG_O:
+            last_atoms.append('H')
+            last_add.append(1)
+        else:
+            last_atoms.append('O')
+            last_add.append(2)
+    else:
+        print(f'{file}: No rule for last atom type {u1.atoms[0].type}.')
+        last_atoms.append('H')
+        last_add.append(0)
+
+    return n, sequence, first_atoms, first_add, last_atoms, last_add
 
 
 def create_macromolecule(sequence, first_atom='H', last_atom='H'):
@@ -894,10 +925,10 @@ def positive_integer(value):
     return int_value
 
 
-def generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par, solvate):
+def generate_structure_file(path, gro, cg_path, tpr, itp_list, mapping, sequences, vsomm_lists, resnames, map_type, par, solvate):
     print(f" - Generating initial structure file from '{gro}'.")
     # unwrap
-    u = unwrapped_atomistic_structure(path, gro, itp_list)
+    u = unwrapped_atomistic_structure(path, gro, tpr, itp_list)
 
     # create mapped structure
     mapped = mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type)
@@ -917,21 +948,24 @@ def generate_structure_file(path, gro, cg_path, itp_list, mapping, sequences, vs
         write_top_file(cg_path, u, itp_list)
 
 
-def unwrapped_atomistic_structure(path, gro, itp_list):
+def unwrapped_atomistic_structure(path, gro, tpr, itp_list):
     # unwraps the atomistic structure to correctly generate the mapped structure
     # to unwrap, the atomistic bonds have to be read and added
-    # load atomistic coordinates
-    u_full = mda.Universe(f'{gro}')
-    # add bonds from itp files
-    n_atoms = 0
-    for i, file in enumerate(itp_list):
-        u_itp = mda.Universe(f'{path}/{file}', topology_format='ITP')
-        if i == 0:
-            bonds = u_itp.bonds.indices
-        else:
-            bonds = np.concatenate((bonds, np.add(u_itp.bonds.indices, n_atoms)))
-        n_atoms += len(u_itp.atoms)
-    u_full.add_TopologyAttr('bonds', bonds)
+    if tpr:
+        u_full = mda.Universe(tpr, gro)
+    else:
+        # load atomistic coordinates
+        u_full = mda.Universe(f'{gro}')
+        # add bonds from itp files
+        n_atoms = 0
+        for i, file in enumerate(itp_list):
+            u_itp = mda.Universe(f'{path}/{file}', topology_format='ITP')
+            if i == 0:
+                bonds = u_itp.bonds.indices
+            else:
+                bonds = np.concatenate((bonds, np.add(u_itp.bonds.indices, n_atoms)))
+            n_atoms += len(u_itp.atoms)
+        u_full.add_TopologyAttr('bonds', bonds)
     # unwrap
     workflow = [transformations.unwrap(u_full.atoms)]
     u_full.trajectory.add_transformations(*workflow)
