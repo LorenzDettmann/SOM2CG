@@ -980,12 +980,23 @@ def unwrapped_atomistic_structure(path, gro, tpr, itp_list):
 
 def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
     """
-    create the mapped structure (without ions) based on the unwrapped atomistic structure and wrap it at the end
+    create the mapped structure based on the unwrapped atomistic structure and wrap it at the end
     """
+    # select ions first
+    ions = u.select_atoms("resname CA2+ or resname NA+")
+    n_ions = len(ions)
+
     # get total number of beads
-    n_beads = sum(len(mapping[i]) for i in range(len(itp_list)))
-    u_mapped = mda.Universe.empty(n_beads, n_residues=n_beads, atom_resindex=np.arange(n_beads),
-                                  residue_segindex=np.zeros(n_beads))
+    n_HS_beads = sum(len(mapping[i]) for i in range(len(itp_list)))
+    n_beads = n_HS_beads + n_ions
+
+    u_mapped = mda.Universe.empty(
+        n_beads,
+        n_residues=n_beads,
+        atom_resindex=np.arange(n_beads),
+        residue_segindex=np.zeros(n_beads),
+    )
+
     coords = []
     prev_atoms = 0
     for i in range(len(sequences)):
@@ -998,6 +1009,11 @@ def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
                 coords.append(a.center_of_geometry())
 
         prev_atoms += get_largest_index(vsomm_lists[i])
+
+    # add coordinates of ions
+    if n_ions > 0:
+        coords.extend(ions.positions)
+
     u_mapped.load_new(np.array(coords), format=mda.coordinates.memory.MemoryReader)
     # set box size to that of the atomistic frame
     u_mapped.dimensions = u.dimensions
@@ -1005,17 +1021,7 @@ def mapped_structure(u, itp_list, mapping, sequences, vsomm_lists, map_type):
     workflow = [transformations.wrap(u_mapped.atoms)]
     u_mapped.trajectory.add_transformations(*workflow)
 
-    # add ions
-    ions = u.select_atoms("resname CA2+ or resname NA+")
-    if len(ions) > 0:
-        # merge with calcium ions
-        merged = mda.Merge(u_mapped.select_atoms("all"), ions)
-    else:
-        merged = u_mapped
-    # add dimensions
-    merged.dimensions = u.dimensions
-
-    return merged
+    return u_mapped
 
 
 def add_residue_info(u, mapped, sequences, mapping, resnames):
