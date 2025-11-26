@@ -27,6 +27,8 @@
 - **Enhanced Bead Type and Bonded Interaction Database**:  
     For optimal accuracy, an extended database of bonded interactions is required. This should include parameters for fragment–fragment connections and cover all instances of fragments having additional hydrogen atoms or methyl groups attached at either end. With such an expanded database in place, the current RDKit conformer search could potentially become obsolete.
     A similar extension is necessary for the database of bead types to address cases involving additional hydrogen atoms and methyl groups attached to the fragments.
+- **Missing .itp files**:
+    If an .itp file of the coarse-grained system was not generated, most likely, the number of conformers was not sufficient. In that case, please increase this number using the `-n_confs` flag.
 
 # Instruction for adding a new fragment to SOM2CG
 - If new fragments are added to the VSOMM2, the fragment database of SOM2CG has to be updated.
