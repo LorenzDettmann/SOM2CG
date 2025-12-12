@@ -1,3 +1,4 @@
+import openmm as mm
 from openmm.unit import nanometer, kelvin, picosecond, femtosecond, bar
 from openmm import Platform, LangevinMiddleIntegrator, MonteCarloBarostat
 from openmm.app import Simulation, StateDataReporter, GromacsGroFile, PDBFile
@@ -18,7 +19,7 @@ FRICTION_COEFF = 1.0 / picosecond
 # steps
 NSTEPS_NVT = 50000       # 0.1 ns
 NSTEPS_NPT = 500000      # 10 ns
-NSTEPS_RUN = 500000      # 10 ns
+NSTEPS_RUN = 5000000     # 100 ns
 
 def create_simulation_environment(topology, system, coords, box, DT, platform_name="CPU"):
     """helper function to create a simulation environment"""
@@ -36,6 +37,75 @@ def create_simulation_environment(topology, system, coords, box, DT, platform_na
     simulation.context.setPeriodicBoxVectors(*box)
     
     return simulation
+
+def apply_nrexcl(topology, system, nrexcl=2):
+    """
+    Applies exclusions for neighbors up to nrexcl bonds away.
+    CHECKS if exclusion already exists to avoid OpenMM errors.
+    """
+    print(f"Applying nrexcl={nrexcl} exclusions (checking for duplicates)...")
+    
+    # 1. Find NonbondedForce
+    nb_force = None
+    for f in system.getForces():
+        if isinstance(f, mm.CustomNonbondedForce):
+            nb_force = f
+            break
+    if not nb_force:
+        print("Warning: No CustomNonbondedForce found.")
+        return
+
+    # 2. Build a set of EXISTING exclusions for fast lookup
+    # OpenMM throws error if we add duplicates, so we must know what's there.
+    existing_exclusions = set()
+    for i in range(nb_force.getNumExclusions()):
+        idx1, idx2 = nb_force.getExclusionParticles(i)
+        # Store as sorted tuple so (1,0) is same as (0,1)
+        existing_exclusions.add(tuple(sorted((idx1, idx2))))
+
+    # 3. Build adjacency graph for topology
+    bonds = [[] for _ in range(topology.getNumAtoms())]
+    for bond in topology.bonds():
+        i = bond.atom1.index
+        j = bond.atom2.index
+        bonds[i].append(j)
+        bonds[j].append(i)
+
+    # 4. Find and add MISSING exclusions
+    count = 0
+    skipped = 0
+    
+    for atom_idx in range(topology.getNumAtoms()):
+        # BFS search for neighbors within nrexcl
+        # (atom_idx, depth)
+        queue = [(atom_idx, 0)]
+        visited = {atom_idx}
+        
+        while queue:
+            curr, depth = queue.pop(0)
+            
+            # If valid neighbor (depth > 0)
+            if 0 < depth <= nrexcl:
+                # Check only if current > atom_idx to avoid double processing (A-B and B-A)
+                if curr > atom_idx:
+                    pair = tuple(sorted((atom_idx, curr)))
+                    
+                    if pair not in existing_exclusions:
+                        nb_force.addExclusion(*pair)
+                        existing_exclusions.add(pair) # Add to local set immediately
+                        count += 1
+                    else:
+                        skipped += 1
+
+            # Continue BFS if depth < nrexcl
+            if depth < nrexcl:
+                for neighbor in bonds[curr]:
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append((neighbor, depth + 1))
+                        
+    print(f"  -> Added {count} NEW exclusions.")
+    print(f"  -> Skipped {skipped} existing exclusions.")
 
 def run_pipeline():
     platform_name = "CUDA" # or CPU
@@ -59,6 +129,7 @@ def run_pipeline():
         epsilon_r=EPSILON_R,
     )
     system_em = top_em.create_system(nonbonded_cutoff=1.1 * nanometer)
+    apply_nrexcl(top_em.topology, system_em, nrexcl=2)
     
     sim_em = create_simulation_environment(top_em.topology, system_em, positions, box_vectors, DT, platform_name)
 
@@ -90,6 +161,7 @@ def run_pipeline():
     
     # create system for NVT
     system_run = top_run.create_system(nonbonded_cutoff=1.1 * nanometer)
+    apply_nrexcl(top_run.topology, system_run, nrexcl=2)
 
     sim_nvt = create_simulation_environment(top_run.topology, system_run, positions, box_vectors, DT_NVT, platform_name)
     
